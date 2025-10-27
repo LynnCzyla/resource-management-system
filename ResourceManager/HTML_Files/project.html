@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects Management - Resource Manager</title>
+    <link rel="stylesheet" href="/ResourceManager/CSS_Files/project.css">
+    <link rel="stylesheet" href="/ResourceManager/CSS_Files/project-modals.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-users-cog"></i>
+                <span>RM System</span>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="/ResourceManager/HTML_Files/dashboard.html" class="nav-item">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/ResourceManager/HTML_Files/employee.html" class="nav-item">
+                <i class="fas fa-user-friends"></i>
+                <span>Employee Directory</span>
+            </a>
+            <a href="/ResourceManager/HTML_Files/project.html" class="nav-item active">
+                <i class="fas fa-project-diagram"></i>
+                <span>Projects</span>
+            </a>
+            <a href="/ResourceManager/HTML_Files/request.html" class="nav-item">
+                <i class="fas fa-inbox"></i>
+                <span>Requests</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <h1>Projects Management</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?name=Resource+Manager&background=000&color=fff" alt="User" class="user-avatar">
+                    <span class="user-name">Resource Manager</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Projects Content -->
+        <div class="page-content">
+            <div class="page-header">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="projectSearch" placeholder="Search projects...">
+                </div>
+            </div>
+
+            <div class="projects-table">
+                <table id="projectsTable">
+                    <thead>
+                        <tr>
+                            <th>Project Name</th>
+                            <th>Status</th>
+                            <th>Team Size</th>
+                            <th>Deadline</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectsTableBody">
+                        <!-- Projects will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- VIEW PROJECT DETAILS MODAL -->
+    <div class="modal-overlay" id="viewProjectModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="viewProjectName">Project Details</h2>
+                <button class="modal-close" id="closeViewProjectModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="project-details-view">
+                    <div class="detail-section">
+                        <div class="detail-row">
+                            <span class="detail-label">Project ID:</span>
+                            <span id="viewProjectId" class="detail-value"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Status:</span>
+                            <span id="viewProjectStatus" class="detail-value"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Project Manager:</span>
+                            <span id="viewProjectManager" class="detail-value"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Team Size:</span>
+                            <span id="viewProjectTeamSize" class="detail-value"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Deadline:</span>
+                            <span id="viewProjectDeadline" class="detail-value"></span>
+                        </div>
+                    </div>
+
+                    <div class="progress-section">
+                        <div class="progress-header">
+                            <span class="detail-label">Progress:</span>
+                            <span id="viewProjectProgress" class="progress-percentage"></span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div id="viewProjectProgressBar" class="progress-bar-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="skills-section">
+                        <span class="detail-label">Required Skills:</span>
+                        <div id="viewProjectSkills" class="skills-display"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-primary" id="closeViewProject">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT PROJECT MODAL -->
+    <div class="modal-overlay" id="editProjectModal">
+        <div class="modal-box modal-box-large">
+            <div class="modal-header">
+                <h2>Edit Project & Assign Team</h2>
+                <button class="modal-close" id="closeEditModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Project Info Section -->
+                <div class="project-info-section">
+                    <h3 id="modalProjectName">Project Name</h3>
+                    <div class="project-meta-grid">
+                        <div class="meta-item">
+                            <span class="meta-label">Project ID:</span>
+                            <span class="meta-value" id="modalProjectId">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Team Size:</span>
+                            <span class="meta-value" id="modalTeamSize">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Status:</span>
+                            <div class="meta-value" id="modalProjectStatus">-</div>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Deadline:</span>
+                            <span class="meta-value" id="modalProjectDeadline">-</span>
+                        </div>
+                    </div>
+                    <div class="required-skills-section">
+                        <span class="meta-label">Required Skills:</span>
+                        <div class="skills-list" id="modalRequiredSkills">
+                            <!-- Skills loaded dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- Employees Section -->
+                <div class="recommendations-section">
+                    <div class="section-header">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <i class="fas fa-users" style="color: #4A90E2; font-size: 20px;"></i>
+                            <h3>All Employees</h3>
+                        </div>
+                        <div class="recommendation-badge" id="employeeCount">0</div>
+                    </div>
+                    
+                    <!-- Filter Section -->
+                    <div class="filter-section">
+                        <div class="filter-controls">
+                            <div class="filter-group">
+                                <label class="filter-label">Search Employee</label>
+                                <input 
+                                    type="text" 
+                                    id="employeeSearchFilter" 
+                                    class="filter-input" 
+                                    placeholder="Search by name, role, or skills..."
+                                >
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label">Availability</label>
+                                <select id="availabilityFilter" class="filter-select">
+                                    <option value="all">All Employees</option>
+                                    <option value="available">Available (0-4h)</option>
+                                    <option value="partial">Partial (4-7h)</option>
+                                    <option value="full">Full (8h)</option>
+                                    <option value="over">Overtime (10h)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="recommendations-list" id="employeesList">
+                        <!-- Employees loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="modal-footer-selection">
+                    <div class="selection-count">
+                        Selected: <span id="selectedCount">0</span> / <span id="totalCount">0</span> employees
+                    </div>
+                    <div class="modal-footer-buttons">
+                        <button class="btn-secondary" id="cancelEditModal">Cancel</button>
+                        <button class="btn-primary" id="saveProjectTeam">
+                            <i class="fas fa-user-check"></i> Assign Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGOUT CONFIRMATION MODAL -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to logout?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOADING OVERLAY -->
+    <div class="modal-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- SUCCESS MESSAGE CONTAINER -->
+    <div id="messageContainer"></div>
+
+    <script src="/ResourceManager/JS_Files/project.js"></script>
+</body>
+</html

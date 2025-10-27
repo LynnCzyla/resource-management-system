@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Directory - Resource Manager</title>
+    <link rel="stylesheet" href="/ResourceManager/CSS_Files/employee.css">
+    <link rel="stylesheet" href="/ResourceManager/CSS_Files/employee-modals.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-users-cog"></i>
+                <span>RM System</span>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="/ResourceManager/HTML_Files/dashboard.html" class="nav-item">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/ResourceManager/HTML_Files/employee.html" class="nav-item active">
+                <i class="fas fa-user-friends"></i>
+                <span>Employee Directory</span>
+            </a>
+            <a href="/ResourceManager/HTML_Files/project.html" class="nav-item">
+                <i class="fas fa-project-diagram"></i>
+                <span>Projects</span>
+            </a>
+            <a href="/ResourceManager/HTML_Files/request.html" class="nav-item">
+                <i class="fas fa-inbox"></i>
+                <span>Requests</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <h1>Employee Directory</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?name=Resource+Manager&background=000&color=fff" alt="User" class="user-avatar">
+                    <span class="user-name">Resource Manager</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Employee Directory Content -->
+        <div class="page-content">
+            <!-- Search and Filters -->
+            <div class="page-header">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="employeeSearch" placeholder="Search by name, skills, or role...">
+                </div>
+                <div class="filter-controls">
+                    <select id="skillFilter" class="filter-select">
+                        <option value="">All Skills</option>
+                        <!-- Options loaded dynamically -->
+                    </select>
+                    <select id="availabilityFilter" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="available">Available</option>
+                        <option value="busy">Busy</option>
+                        <option value="partially">Partially Available</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Employee Grid -->
+            <div class="employee-grid" id="employeeGrid">
+                <!-- Employee cards will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <!-- VIEW EMPLOYEE PROFILE MODAL -->
+    <div class="modal-overlay" id="viewEmployeeModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="viewEmpName">Employee Profile</h2>
+                <button class="modal-close" id="closeViewModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="employee-profile-view">
+                    <img id="viewEmpAvatar" class="employee-profile-avatar" alt="Employee Avatar">
+                    
+                    <div class="profile-section">
+                        <div class="profile-row">
+                            <span class="profile-label">Employee ID:</span>
+                            <span id="viewEmpId" class="profile-value"></span>
+                        </div>
+                        <div class="profile-row">
+                            <span class="profile-label">Role:</span>
+                            <span id="viewEmpRole" class="profile-value"></span>
+                        </div>
+                        <div class="profile-row">
+                            <span class="profile-label">Department:</span>
+                            <span id="viewEmpDepartment" class="profile-value"></span>
+                        </div>
+                        <div class="profile-row">
+                            <span class="profile-label">Experience:</span>
+                            <span id="viewEmpExperience" class="profile-value"></span>
+                        </div>
+                        <div class="profile-row">
+                            <span class="profile-label">Current Workload:</span>
+                            <span id="viewEmpWorkload" class="profile-value"></span>
+                        </div>
+                        <div class="profile-row">
+                            <span class="profile-label">Active Projects:</span>
+                            <span id="viewEmpProjects" class="profile-value"></span>
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <h4>Skills</h4>
+                        <div id="viewEmpSkills" class="skills-display"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-primary" id="closeProfileBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ASSIGN EMPLOYEE MODAL -->
+    <div class="modal-overlay" id="assignEmployeeModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>Assign Employee to Project</h2>
+                <button class="modal-close" id="closeAssignModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="assign-info">
+                    <div class="assign-employee-card">
+                        <img id="assignEmpAvatar" class="assign-avatar" alt="Employee">
+                        <div>
+                            <h3 id="assignEmpName"></h3>
+                            <p id="assignEmpRole"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="assignEmployeeForm">
+                    <div class="form-group">
+                        <label for="assignProjectSelect">Select Project</label>
+                        <select id="assignProjectSelect" name="project" required>
+                            <option value="">-- Select a project --</option>
+                            <!-- Options loaded dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="assignHours">Estimated Hours per Week</label>
+                        <input type="number" id="assignHours" name="hours" min="1" max="40" value="8" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="assignStartDate">Start Date</label>
+                        <input type="date" id="assignStartDate" name="startDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="assignNotes">Notes (Optional)</label>
+                        <textarea id="assignNotes" name="notes" rows="3" placeholder="Add any additional notes..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelAssignBtn">Cancel</button>
+                <button type="submit" class="btn-primary" id="submitAssignBtn">
+                    <i class="fas fa-check"></i> Assign to Project
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BUSY EMPLOYEE CONFIRMATION MODAL -->
+    <div class="modal-overlay" id="busyEmployeeModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Employee is Busy</h2>
+            </div>
+            <div class="modal-body">
+                <div class="warning-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p id="busyEmployeeText"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelBusyAssign">Cancel</button>
+                <button type="button" class="btn-primary" id="proceedBusyAssign">Proceed Anyway</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGOUT CONFIRMATION MODAL -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to logout?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOADING OVERLAY -->
+    <div class="modal-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- SUCCESS MESSAGE CONTAINER -->
+    <div id="messageContainer"></div>
+
+    <script src="/ResourceManager/JS_Files/employee.js"></script>
+</body>
+</html>
