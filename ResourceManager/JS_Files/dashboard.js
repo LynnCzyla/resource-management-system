@@ -526,7 +526,8 @@ function handleLogout() {
         ModalManager.hideLoading();
         showSuccessMessage('You have been logged out successfully.');
         // Redirect to login page
-        // window.location.href = 'login.html';
+        window.location.href = "/login/HTML_Files/login.html";
+
     }, 1000);
 }
 

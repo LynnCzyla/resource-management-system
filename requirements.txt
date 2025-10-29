@@ -1,1 +1,9 @@
 python -m http.server 3000
+
+uvicorn project_recommendation:app --reload --host 0.0.0.0 --port 8000
+
+pip install pandas fastapi uvicorn supabase
+pip install fastapi[all]
+
+
+

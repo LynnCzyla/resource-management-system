@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/ResourceManager/CSS_Files/project.css">
     <link rel="stylesheet" href="/ResourceManager/CSS_Files/project-modals.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <!-- Sidebar -->
@@ -122,16 +123,6 @@
                         </div>
                     </div>
 
-                    <div class="progress-section">
-                        <div class="progress-header">
-                            <span class="detail-label">Progress:</span>
-                            <span id="viewProjectProgress" class="progress-percentage"></span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div id="viewProjectProgressBar" class="progress-bar-fill"></div>
-                        </div>
-                    </div>
-
                     <div class="skills-section">
                         <span class="detail-label">Required Skills:</span>
                         <div id="viewProjectSkills" class="skills-display"></div>
@@ -208,12 +199,9 @@
                             <div class="filter-group">
                                 <label class="filter-label">Availability</label>
                                 <select id="availabilityFilter" class="filter-select">
+                                    <option value="recommended">AI Recommendations</option>
                                     <option value="all">All Employees</option>
-                                    <option value="available">Available (0-4h)</option>
-                                    <option value="partial">Partial (4-7h)</option>
-                                    <option value="full">Full (8h)</option>
-                                    <option value="over">Overtime (10h)</option>
-                                </select>
+                                </select>                                
                             </div>
                         </div>
                     </div>
@@ -226,8 +214,8 @@
             <div class="modal-footer">
                 <div class="modal-footer-selection">
                     <div class="selection-count">
-                        Selected: <span id="selectedCount">0</span> / <span id="totalCount">0</span> employees
-                    </div>
+                        Selected: <span id="selectedCount">0</span> / <span id="totalNeededCount">0</span> employees
+                    </div>                    
                     <div class="modal-footer-buttons">
                         <button class="btn-secondary" id="cancelEditModal">Cancel</button>
                         <button class="btn-primary" id="saveProjectTeam">
@@ -266,6 +254,6 @@
     <!-- SUCCESS MESSAGE CONTAINER -->
     <div id="messageContainer"></div>
 
-    <script src="/ResourceManager/JS_Files/project.js"></script>
+    <script type="module" src="/ResourceManager/JS_Files/project.js"></script>
 </body>
 </html

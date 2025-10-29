@@ -1,6 +1,6 @@
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
+// ---------- Imports ----------
+import { supabase } from "../../supabaseClient.js";
+import bcrypt from "https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/+esm";
 
 function debounce(func, delay = 300) {
     let timeoutId;
@@ -103,195 +103,112 @@ class MessageManager {
 // ============================================
 
 class DataService {
-    constructor() {
-        this.projects = [];
-        this.employees = [];
-        this.assignableCounts = {};
-        this.initializeMockData();
-    }
-
-    initializeMockData() {
-        this.projects = [
-            {
-                id: 'PROJ001',
-                name: 'Project Alpha',
-                status: 'active',
-                teamSize: 5,
-                progress: 65,
-                deadline: '2025-12-15',
-                manager: 'Sarah Williams',
-                skills: ['Python', 'React', 'AWS']
-            },
-            {
-                id: 'PROJ002',
-                name: 'Project Beta',
-                status: 'active',
-                teamSize: 3,
-                progress: 45,
-                deadline: '2025-11-30',
-                manager: 'John Anderson',
-                skills: ['Figma', 'Adobe XD', 'UI Design']
-            },
-            {
-                id: 'PROJ003',
-                name: 'Project Gamma',
-                status: 'pending',
-                teamSize: 4,
-                progress: 20,
-                deadline: '2026-01-20',
-                manager: 'Lisa Chen',
-                skills: ['Java', 'Spring Boot', 'SQL']
-            },
-            {
-                id: 'PROJ004',
-                name: 'Project Delta',
-                status: 'active',
-                teamSize: 6,
-                progress: 80,
-                deadline: '2025-11-10',
-                manager: 'Mark Taylor',
-                skills: ['Angular', 'Node.js', 'MongoDB']
-            },
-            {
-                id: 'PROJ005',
-                name: 'Project Epsilon',
-                status: 'completed',
-                teamSize: 4,
-                progress: 100,
-                deadline: '2025-10-01',
-                manager: 'Sarah Williams',
-                skills: ['Docker', 'Kubernetes', 'AWS']
-            }
-        ];
-
-        this.employees = [
-            {
-                id: 'EMP001',
-                name: 'John Doe',
-                role: 'Senior Developer',
-                department: 'Engineering',
-                skills: ['Python', 'JavaScript', 'React', 'Node.js'],
-                availability: 'full',
-                workloadHours: 8,
-                projects: ['Project Alpha'],
-                experience: '5 years',
-                avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=4A90E2&color=fff'
-            },
-            {
-                id: 'EMP002',
-                name: 'Jane Smith',
-                role: 'UI/UX Designer',
-                department: 'Design',
-                skills: ['Figma', 'Adobe XD', 'Photoshop', 'UI Design'],
-                availability: 'over',
-                workloadHours: 10,
-                projects: ['Project Beta', 'Project Gamma'],
-                experience: '4 years',
-                avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=7ED321&color=fff'
-            },
-            {
-                id: 'EMP003',
-                name: 'Mike Johnson',
-                role: 'Full Stack Developer',
-                department: 'Engineering',
-                skills: ['Java', 'Spring Boot', 'Angular', 'SQL'],
-                availability: 'partial',
-                workloadHours: 6,
-                projects: ['Project Delta'],
-                experience: '6 years',
-                avatar: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=F5A623&color=fff'
-            },
-            {
-                id: 'EMP004',
-                name: 'Sarah Williams',
-                role: 'Project Manager',
-                department: 'Management',
-                skills: ['Agile', 'Scrum', 'Jira', 'Team Leadership'],
-                availability: 'available',
-                workloadHours: 3,
-                projects: [],
-                experience: '7 years',
-                avatar: 'https://ui-avatars.com/api/?name=Sarah+Williams&background=D0021B&color=fff'
-            },
-            {
-                id: 'EMP005',
-                name: 'David Brown',
-                role: 'DevOps Engineer',
-                department: 'Engineering',
-                skills: ['Docker', 'Kubernetes', 'AWS', 'CI/CD'],
-                availability: 'over',
-                workloadHours: 9,
-                projects: ['Project Alpha', 'Project Epsilon'],
-                experience: '5 years',
-                avatar: 'https://ui-avatars.com/api/?name=David+Brown&background=4A90E2&color=fff'
-            },
-            {
-                id: 'EMP006',
-                name: 'Emily Davis',
-                role: 'Frontend Developer',
-                department: 'Engineering',
-                skills: ['Vue.js', 'CSS', 'HTML', 'TypeScript'],
-                availability: 'available',
-                workloadHours: 2,
-                projects: [],
-                experience: '3 years',
-                avatar: 'https://ui-avatars.com/api/?name=Emily+Davis&background=7ED321&color=fff'
-            },
-            {
-                id: 'EMP007',
-                name: 'Robert Martinez',
-                role: 'Backend Developer',
-                department: 'Engineering',
-                skills: ['Node.js', 'MongoDB', 'Express', 'GraphQL'],
-                availability: 'full',
-                workloadHours: 8,
-                projects: ['Project Beta'],
-                experience: '4 years',
-                avatar: 'https://ui-avatars.com/api/?name=Robert+Martinez&background=F5A623&color=fff'
-            },
-            {
-                id: 'EMP008',
-                name: 'Lisa Anderson',
-                role: 'QA Engineer',
-                department: 'Quality Assurance',
-                skills: ['Selenium', 'Jest', 'Automation', 'Testing'],
-                availability: 'partial',
-                workloadHours: 5,
-                projects: ['Project Alpha'],
-                experience: '3 years',
-                avatar: 'https://ui-avatars.com/api/?name=Lisa+Anderson&background=D0021B&color=fff'
-            }
-        ];
-
-        this.assignableCounts = {
-            'PROJ001': 8,
-            'PROJ002': 8,
-            'PROJ003': 8,
-            'PROJ004': 8,
-            'PROJ005': 8
-        };
-    }
-
-    async getAllProjects() {
-        return Promise.resolve([...this.projects]);
-    }
-
-    async getProjectById(id) {
-        return Promise.resolve(this.projects.find(proj => proj.id === id));
-    }
-
+    // Fetch all employees
     async getAllEmployees() {
-        return Promise.resolve([...this.employees]);
+        const { data, error } = await supabase
+          .from('user_details')
+          .select(`
+            employee_id,
+            job_title,
+            department,
+            status,
+            experience_level,
+            skills,
+            users:user_id (
+              id,
+              name,
+              email
+            )
+          `);
+      
+        if (error) throw error;
+        return data;
+      }
+      
+  
+    // Fetch all approved resource requests (linked to projects)
+    async getAllProjects() {
+        const { data, error } = await supabase
+          .from('projects')
+          .select(`
+            id,
+            name,
+            status,
+            end_date,
+            project_requirements(quantity_needed),
+            resource_requests(status)
+          `)
+          .eq('resource_requests.status', 'approved');
+      
+        if (error) {
+          console.error("Error loading projects:", error);
+          throw error;
+        }
+      
+        // Format data for your UI
+        const formatted = (data || []).map(project => ({
+          projectId: project.id,
+          projectName: project.name,
+          projectStatus: project.status,
+          teamSize: (project.project_requirements || [])
+            .reduce((sum, req) => sum + (req.quantity_needed || 0), 0),
+          deadline: project.end_date
+        }));
+      
+        return formatted;
+      }
+      
+      
+  
+    // Assign employee to project
+    async assignEmployeeToProject(projectId, userId) {
+      const { error } = await supabase
+        .from('project_assignments')
+        .insert([{ project_id: projectId, user_id: userId }]);
+      if (error) throw error;
     }
-
-    async getEmployeeById(id) {
-        return Promise.resolve(this.employees.find(emp => emp.id === id));
-    }
-
+  
+    // Fetch one project by id
+    async getProjectById(id) {
+        const { data, error } = await supabase
+          .from('projects')
+          .select(`
+            id,
+            name,
+            description,
+            start_date,
+            end_date,
+            status,
+            created_by,
+            users:created_by (
+              id,
+              name
+            ),
+            project_requirements (
+              id,
+              experience_level,
+              quantity_needed,
+              required_skills
+            )
+          `)
+          .eq('id', id)
+          .single();
+      
+        if (error) throw error;
+      
+        console.log("Fetched project:", data);
+        return data;
+      }
+      
+      
+      
+  
+    // Placeholder — can later compute remaining assignable slots
     getAssignableCount(projectId) {
-        return this.assignableCounts[projectId] || 0;
+      return 0;
     }
-}
+  }
+  
 
 // ============================================
 // UI MANAGER
@@ -308,8 +225,10 @@ class UIManager {
     }
 
     capitalize(str) {
+        if (!str || typeof str !== "string") return ""; // prevent crash
         return str.charAt(0).toUpperCase() + str.slice(1);
-    }
+      }
+      
 
     getStatusColor(status) {
         const colors = {
@@ -343,36 +262,37 @@ class UIManager {
 
     createProjectRow(proj) {
         const tr = document.createElement('tr');
-        tr.dataset.id = proj.id;
-
+        tr.dataset.id = proj.projectId;
+      
         const tdName = document.createElement('td');
         const strongName = document.createElement('strong');
-        strongName.textContent = proj.name;
+        strongName.textContent = proj.projectName; 
         tdName.appendChild(strongName);
-
+      
         const tdStatus = document.createElement('td');
         const statusSpan = document.createElement('span');
-        statusSpan.className = `project-status ${proj.status}`;
-        statusSpan.textContent = this.capitalize(proj.status);
+        statusSpan.className = `project-status ${proj.projectStatus}`; 
+        statusSpan.textContent = this.capitalize(proj.projectStatus);  
         tdStatus.appendChild(statusSpan);
-
+      
         const tdTeam = document.createElement('td');
         tdTeam.textContent = `${proj.teamSize} members`;
-
+      
         const tdDeadline = document.createElement('td');
         tdDeadline.textContent = this.formatDate(proj.deadline);
-
+      
         const tdActions = document.createElement('td');
         tdActions.appendChild(this.createActionButtons(proj));
-
+      
         tr.appendChild(tdName);
         tr.appendChild(tdStatus);
         tr.appendChild(tdTeam);
         tr.appendChild(tdDeadline);
         tr.appendChild(tdActions);
-
+      
         return tr;
-    }
+      }
+      
 
     createActionButtons(proj) {
         const div = document.createElement('div');
@@ -382,7 +302,7 @@ class UIManager {
         viewBtn.className = 'icon-btn';
         viewBtn.title = 'View';
         viewBtn.innerHTML = '<i class="fas fa-eye"></i>';
-        viewBtn.onclick = () => app.viewProject(proj.id);
+        viewBtn.onclick = () => app.viewProject(proj.projectId);
 
         const editContainer = document.createElement('div');
         editContainer.className = 'action-btn-with-badge';
@@ -391,9 +311,9 @@ class UIManager {
         editBtn.className = 'icon-btn';
         editBtn.title = 'Assign Team';
         editBtn.innerHTML = '<i class="fas fa-user-plus"></i>';
-        editBtn.onclick = () => app.editProject(proj.id);
+        editBtn.onclick = () => app.editProject(proj.projectId);
 
-        const assignableCount = this.dataService.getAssignableCount(proj.id);
+        const assignableCount = this.dataService.getAssignableCount(proj.projectId);
         if (assignableCount > 0) {
             const badge = document.createElement('span');
             badge.className = 'notification-badge';
@@ -412,19 +332,27 @@ class UIManager {
 
     renderSkillsList(container, skills) {
         if (!container) return;
-
-        const fragment = document.createDocumentFragment();
-        
-        skills.forEach(skill => {
-            const span = document.createElement('span');
-            span.className = 'skill-tag';
-            span.textContent = skill;
-            fragment.appendChild(span);
-        });
-
+    
         container.innerHTML = '';
-        container.appendChild(fragment);
+    
+        if (!Array.isArray(skills) || skills.length === 0) {
+            container.innerHTML = '<p>No project requirements listed.</p>';
+            return;
+        }
+    
+        skills.forEach(skill => {
+            const li = document.createElement('li');
+    
+            const quantity = skill.quantity_needed || 0;
+            const level = skill.experience_level || 'Any';
+            const requiredSkills = (skill.required_skills || []).join(', ') || 'General';
+    
+            li.textContent = `${quantity} ${level} (${requiredSkills})`;
+            container.appendChild(li);
+        });
     }
+      
+      
 
     renderEmployeesList(container, employees) {
         if (!container) return;
@@ -449,44 +377,54 @@ class UIManager {
         const card = document.createElement('div');
         card.className = 'recommendation-card';
         card.dataset.empId = emp.id;
-
+    
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'employee-checkbox';
         checkbox.dataset.empId = emp.id;
-
+    
         const number = document.createElement('span');
         number.className = 'employee-number';
         number.textContent = `${index + 1}.`;
-
+    
         const avatar = document.createElement('img');
-        avatar.src = emp.avatar;
-        avatar.alt = emp.name;
+        avatar.src = emp.avatar
+            ? emp.avatar
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random&color=fff`;
+        avatar.alt = emp.name || "Employee";
         avatar.className = 'employee-avatar-circle';
-
+    
         const details = document.createElement('div');
         details.className = 'recommendation-details';
-
+    
         const h4 = document.createElement('h4');
         h4.textContent = emp.name;
-
+    
         const p = document.createElement('p');
         p.textContent = emp.role;
-
+    
         const skillsDiv = document.createElement('div');
         skillsDiv.className = 'recommendation-skills';
         
-        emp.skills.slice(0, 4).forEach(skill => {
+        if (emp.skills && emp.skills.length > 0) {
+            emp.skills.slice(0, 4).forEach(skill => {
+                const skillSpan = document.createElement('span');
+                skillSpan.className = 'skill-tag';
+                skillSpan.textContent = skill;
+                skillsDiv.appendChild(skillSpan);
+            });
+        } else {
             const skillSpan = document.createElement('span');
             skillSpan.className = 'skill-tag';
-            skillSpan.textContent = skill;
+            skillSpan.textContent = 'No skills';
             skillsDiv.appendChild(skillSpan);
-        });
-
+        }
+        
+    
         details.appendChild(h4);
         details.appendChild(p);
         details.appendChild(skillsDiv);
-
+    
         const availabilityBadge = document.createElement('span');
         availabilityBadge.className = 'match-score';
         
@@ -512,15 +450,16 @@ class UIManager {
             availabilityBadge.style.backgroundColor = '#FFEBEE';
             availabilityBadge.style.color = '#C62828';
         }
-
+    
         card.appendChild(checkbox);
         card.appendChild(number);
         card.appendChild(avatar);
         card.appendChild(details);
         card.appendChild(availabilityBadge);
-
+    
         return card;
     }
+    
 }
 
 // ============================================
@@ -621,12 +560,12 @@ class ProjectApp {
                 return;
             }
             
-            const filtered = projects.filter(proj => 
-                proj.name.toLowerCase().includes(query) ||
-                proj.manager.toLowerCase().includes(query) ||
-                proj.id.toLowerCase().includes(query) ||
-                proj.status.toLowerCase().includes(query)
-            );
+            const filtered = projects.filter(proj =>
+                proj.projectName.toLowerCase().includes(query) ||
+                proj.projectStatus.toLowerCase().includes(query) ||
+                proj.projectId.toString().includes(query)
+              );
+              
             
             this.uiManager.renderProjects(filtered);
         } catch (error) {
@@ -637,134 +576,221 @@ class ProjectApp {
 
     async viewProject(id) {
         try {
-            ModalManager.showLoading();
-            const project = await this.dataService.getProjectById(id);
-            ModalManager.hideLoading();
-            
-            if (!project) {
-                MessageManager.error('Project not found');
-                return;
-            }
-
-            document.getElementById('viewProjectName').textContent = project.name;
-            document.getElementById('viewProjectId').textContent = project.id;
-            
-            const statusElement = document.getElementById('viewProjectStatus');
-            statusElement.textContent = this.uiManager.capitalize(project.status);
-            statusElement.style.color = this.uiManager.getStatusColor(project.status);
-            
-            document.getElementById('viewProjectManager').textContent = project.manager;
-            document.getElementById('viewProjectTeamSize').textContent = `${project.teamSize} members`;
-            document.getElementById('viewProjectDeadline').textContent = this.uiManager.formatDate(project.deadline);
-            
-            document.getElementById('viewProjectProgress').textContent = `${project.progress}%`;
-            const progressBar = document.getElementById('viewProjectProgressBar');
-            progressBar.style.width = `${project.progress}%`;
-
-            const skillsContainer = document.getElementById('viewProjectSkills');
-            this.uiManager.renderSkillsList(skillsContainer, project.skills);
-
-            ModalManager.show('viewProjectModal');
+          ModalManager.showLoading();
+          const project = await this.dataService.getProjectById(id);
+          ModalManager.hideLoading();
+      
+          if (!project) {
+            MessageManager.error('Project not found');
+            return;
+          }
+      
+          // ---- Basic Info ----
+          document.getElementById('viewProjectName').textContent = project.name || 'Untitled Project';
+          document.getElementById('viewProjectId').textContent = project.id;
+      
+          // ---- Status ----
+          const statusElement = document.getElementById('viewProjectStatus');
+          statusElement.textContent = this.uiManager.capitalize(project.status || 'pending');
+          statusElement.style.color = this.uiManager.getStatusColor(project.status);
+      
+          // ---- Manager ----
+          const managerName =
+          project.users?.name ||
+          'Unassigned';
+        
+          document.getElementById('viewProjectManager').textContent = managerName;
+      
+          // ---- Team Size ----
+          const totalNeeded = project.project_requirements
+            ? project.project_requirements.reduce((sum, req) => sum + (req.quantity_needed || 0), 0)
+            : 0;
+          document.getElementById('viewProjectTeamSize').textContent = `${totalNeeded} members`;
+      
+          // ---- Deadline ----
+          let deadlineText = 'No deadline set';
+          if (project.end_date) {
+            const date = new Date(project.end_date);
+            if (!isNaN(date)) deadlineText = date.toLocaleDateString();
+          }
+          document.getElementById('viewProjectDeadline').textContent = deadlineText;
+      
+          // ---- Skills ----
+          const skillsContainer = document.getElementById('viewProjectSkills');
+          this.uiManager.renderSkillsList(skillsContainer, project.project_requirements || []);
+      
+          ModalManager.show('viewProjectModal');
         } catch (error) {
-            ModalManager.hideLoading();
-            console.error('Error viewing project:', error);
-            MessageManager.error('Failed to load project details');
+          ModalManager.hideLoading();
+          console.error('Error viewing project:', error);
+          MessageManager.error('Failed to load project details');
         }
-    }
+      }
+      
+      
 
-    async editProject(id) {
+      async editProject(id) {
         try {
             ModalManager.showLoading();
-            const project = await this.dataService.getProjectById(id);
-            const employees = await this.dataService.getAllEmployees();
-            
+    
+            // Fetch project & employees
+            const [project, employees] = await Promise.all([
+                this.dataService.getProjectById(id),
+                this.dataService.getAllEmployees()
+            ]);
+    
+            let recommendedEmployees = [];
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/recommendations/${id}`);
+                const data = await response.json();
+                // Flatten recommended employee IDs from all requirement rows as strings
+                recommendedEmployees = data.recommendations.flatMap(r => r.recommended_employees.map(String));
+                console.log("Recommended Employees from API:", recommendedEmployees);
+            } catch (err) {
+                console.warn("Failed to fetch recommendations:", err);
+            }
+    
             ModalManager.hideLoading();
-            
+    
             if (!project) {
                 MessageManager.error('Project not found');
                 return;
             }
-
-            this.showEditProjectModal(project, employees);
+    
+            // Render modal with employees and recommendations
+            this.showEditProjectModal(project, employees, recommendedEmployees);
         } catch (error) {
             ModalManager.hideLoading();
             console.error('Error editing project:', error);
             MessageManager.error('Failed to load project details');
         }
     }
-
-    showEditProjectModal(project, employees) {
+    
+    showEditProjectModal(project, employees, recommendedEmployees = []) {
         this.currentProjectId = project.id;
         this.allEmployees = employees;
-
-        document.getElementById('modalProjectName').textContent = project.name;
+        this.recommendedIds = recommendedEmployees.map(String); // ensure string for comparison
+        this.showingAllEmployees = false;
+    
+        // ---- Basic project info ----
+        document.getElementById('modalProjectName').textContent = project.name || 'Untitled Project';
         document.getElementById('modalProjectId').textContent = project.id;
-        document.getElementById('modalTeamSize').textContent = `${project.teamSize} members`;
-        
+    
+        const totalNeeded = project.project_requirements
+            ? project.project_requirements.reduce((sum, req) => sum + (req.quantity_needed || 0), 0)
+            : 0;
+        this.currentProjectTotalNeeded = totalNeeded;
+        document.getElementById('modalTeamSize').textContent = `${totalNeeded} members`;
+    
+        // ---- Status & Deadline ----
         const statusElement = document.getElementById('modalProjectStatus');
-        const statusSpan = document.createElement('span');
-        statusSpan.className = `project-status ${project.status}`;
-        statusSpan.textContent = this.uiManager.capitalize(project.status);
-        statusElement.innerHTML = '';
-        statusElement.appendChild(statusSpan);
-        
-        document.getElementById('modalProjectDeadline').textContent = this.uiManager.formatDate(project.deadline);
-        
+        if (statusElement) {
+            statusElement.innerHTML = '';
+            const statusSpan = document.createElement('span');
+            statusSpan.className = `project-status ${project.status}`;
+            statusSpan.textContent = this.uiManager.capitalize(project.status);
+            statusElement.appendChild(statusSpan);
+        }
+    
+        let deadlineText = 'No deadline set';
+        if (project.end_date) {
+            const date = new Date(project.end_date);
+            if (!isNaN(date)) deadlineText = date.toLocaleDateString();
+        }
+        document.getElementById('modalProjectDeadline').textContent = deadlineText;
+    
+        // ---- Skills list ----
         const skillsContainer = document.getElementById('modalRequiredSkills');
-        this.uiManager.renderSkillsList(skillsContainer, project.skills);
-
-        document.getElementById('employeeCount').textContent = employees.length;
-        
-        // Reset filters
+        this.uiManager.renderSkillsList(skillsContainer, project.project_requirements || []);
+    
+        // ---- Employee count ----
+        document.getElementById('totalNeededCount').textContent = totalNeeded;
+        document.getElementById('selectedCount').textContent = 0;
+    
+        // ---- Reset filters ----
         const searchFilter = document.getElementById('employeeSearchFilter');
         const availFilter = document.getElementById('availabilityFilter');
         if (searchFilter) searchFilter.value = '';
-        if (availFilter) availFilter.value = 'all';
-        
-        // Render all employees
+        if (availFilter) availFilter.value = 'recommended';
+    
+        // ---- Render employees ----
         this.filterEmployees();
-
+    
+        // Listen for toggle change
+        if (availFilter) {
+            availFilter.addEventListener('change', () => this.filterEmployees());
+        }
+    
         ModalManager.show('editProjectModal');
     }
-
+    
+    
+    
+    
     filterEmployees() {
         if (!this.allEmployees) return;
-
+    
         const searchInput = document.getElementById('employeeSearchFilter');
         const availFilter = document.getElementById('availabilityFilter');
-        
+    
         const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
-        const availValue = availFilter ? availFilter.value : 'all';
-
-        let filtered = [...this.allEmployees];
-
-        // Filter by search
+        const availValue = availFilter ? availFilter.value : 'recommended';
+    
+        // Filter out RM/PM
+        let eligibleEmployees = this.allEmployees.filter(emp => {
+            const role = (emp.job_title || '').toLowerCase();
+            return role !== 'resource manager' && role !== 'project manager';
+        });
+    
+        let filtered = [];
+    
+        if (availValue === 'recommended') {
+            filtered = eligibleEmployees.filter(emp =>
+                this.recommendedIds.includes(String(emp.employee_id))
+            );
+        } else if (availValue === 'all') {
+            filtered = [...eligibleEmployees];
+        }
+    
+        // Apply search filter
         if (searchQuery) {
-            filtered = filtered.filter(emp => 
-                emp.name.toLowerCase().includes(searchQuery) ||
-                emp.role.toLowerCase().includes(searchQuery) ||
-                emp.skills.some(skill => skill.toLowerCase().includes(searchQuery))
+            filtered = filtered.filter(emp =>
+                (emp.users?.name || '').toLowerCase().includes(searchQuery) ||
+                (emp.job_title || '').toLowerCase().includes(searchQuery) ||
+                (emp.skills || []).some(skill => skill.toLowerCase().includes(searchQuery))
             );
         }
-
-        // Filter by availability
-        if (availValue !== 'all') {
-            filtered = filtered.filter(emp => emp.availability === availValue);
-        }
-
+    
+        // Transform for UI
+        const renderData = filtered.map((emp, i) => ({
+            id: emp.employee_id,
+            name: emp.users?.name || 'Unnamed',
+            role: emp.job_title || 'No role specified',
+            skills: emp.skills || ['General'],
+            availability: emp.status || 'available'
+        }));
+    
         const empList = document.getElementById('employeesList');
-        this.uiManager.renderEmployeesList(empList, filtered);
-        
-        document.getElementById('employeeCount').textContent = filtered.length;
-        document.getElementById('totalCount').textContent = filtered.length;
-        
-        this.updateSelectionCount();
-
-        // Re-add checkbox listeners
-        document.querySelectorAll('.employee-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', () => this.updateSelectionCount());
+        this.uiManager.renderEmployeesList(empList, renderData);
+    
+        // Pre-check AI recommended employees
+        document.querySelectorAll('.employee-checkbox').forEach(cb => {
+            if (this.recommendedIds.includes(cb.dataset.empId)) {
+                cb.checked = true;
+                cb.parentElement.classList.add('recommended');
+            }
+    
+            cb.addEventListener('change', () => this.updateSelectionCount());
         });
+    
+        document.getElementById('employeeCount').textContent = filtered.length;
+        this.updateSelectionCount();
     }
+    
+    
+    
+    
+    
 
     updateSelectionCount() {
         const checkboxes = document.querySelectorAll('.employee-checkbox');
