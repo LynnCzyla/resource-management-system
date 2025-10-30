@@ -106,7 +106,6 @@ class ModalManager {
     }
 }
 
-
 // ============================================
 // MESSAGE UTILITIES
 // ============================================
@@ -195,8 +194,6 @@ class DataService {
         if (error) throw error;
         return data;
       }
-      
-  
     // Fetch all approved resource requests (linked to projects)
   async getAllProjects() {
     const { data, error } = await supabase
@@ -238,10 +235,6 @@ class DataService {
     return Array.from(projectMap.values());
 }
 
-      
-      
-      
-  
     // Assign employee to project
     async assignEmployeeToProject(projectId, userId) {
       const { error } = await supabase
@@ -280,9 +273,7 @@ class DataService {
       
         console.log("Fetched project:", data);
         return data;
-      }
-      
-      
+      } 
     // -----------------------------
 // Preload existing assignments
 // -----------------------------
@@ -301,9 +292,6 @@ class DataService {
         // Store assigned employee IDs as strings
         this.assignedEmployees[projectId] = new Set(data.map(d => String(d.employee_id)));
     }
-
-
-  
     // Placeholder — can later compute remaining assignable slots
     getAssignableCount(projectId) {
         const assigned = this.assignedEmployees[projectId]?.size || 0;
@@ -321,11 +309,8 @@ class DataService {
       
         if (error) throw error;
         return data.length;
-      }
-      
+      }    
   }
-  
-
 // ============================================
 // UI MANAGER
 // ============================================
@@ -408,8 +393,7 @@ class UIManager {
       
         return tr;
       }
-      
-
+    
       createActionButtons(proj) {
         const div = document.createElement('div');
         div.className = 'action-buttons';
@@ -437,7 +421,6 @@ class UIManager {
     
         return div;
     }
-    
 
     renderSkillsList(container, skills) {
         if (!container) return;
@@ -459,9 +442,7 @@ class UIManager {
             li.textContent = `${quantity} ${level} (${requiredSkills})`;
             container.appendChild(li);
         });
-    }
-      
-      
+    } 
 
     renderEmployeesList(container, employees) {
         if (!container) return;
@@ -565,10 +546,6 @@ class UIManager {
     
         return card;
     }
-    
-    
-    
-    
 }
 
 // ============================================
@@ -764,7 +741,13 @@ class ProjectApp {
         try {
             ModalManager.showLoading();
     
-            // 1. Preload already assigned employees
+            // 🧹 Reset previous selections and counts
+            this.assignedEmployees[projectId] = new Set();
+            this.currentProjectId = projectId;
+            const selectedCountEl = document.getElementById("selectedCount");
+            if (selectedCountEl) selectedCountEl.textContent = 0;
+    
+            // 1. Preload already assigned employees (freshly)
             await this.preloadAssignedEmployees(projectId);
     
             // 2. Fetch project details and all employees concurrently
@@ -822,6 +805,8 @@ class ProjectApp {
     }
     
     showEditProjectModal(project) {
+        document.querySelectorAll(".employee-checkbox").forEach(cb => cb.checked = false);
+    
         this.currentProjectTotalNeeded = project.project_requirements.reduce(
             (sum, r) => sum + (r.quantity_needed || 0),
             0
@@ -831,14 +816,19 @@ class ProjectApp {
         document.getElementById("modalProjectId").textContent = project.id;
         document.getElementById("modalTeamSize").textContent = `${this.currentProjectTotalNeeded} members`;
         document.getElementById("totalNeededCount").textContent = this.currentProjectTotalNeeded;
-        document.getElementById("selectedCount").textContent = 0;
+
+        const assignedCount = this.assignedEmployees[project.id]?.size || 0;
+        document.getElementById("selectedCount").textContent = assignedCount;
     
         const statusEl = document.getElementById("modalProjectStatus");
         if (statusEl) {
-            statusEl.innerHTML = `<span class="project-status ${project.status}">${this.uiManager.capitalize(project.status)}</span>`;
+            statusEl.innerHTML = `<span class="project-status ${project.status}">
+                ${this.uiManager.capitalize(project.status)}</span>`;
         }
     
-        const deadlineText = project.end_date ? new Date(project.end_date).toLocaleDateString() : "No deadline set";
+        const deadlineText = project.end_date
+            ? new Date(project.end_date).toLocaleDateString()
+            : "No deadline set";
         document.getElementById("modalProjectDeadline").textContent = deadlineText;
     
         this.uiManager.renderSkillsList(
@@ -852,7 +842,7 @@ class ProjectApp {
         if (searchFilter) searchFilter.value = "";
         if (availFilter) availFilter.value = "recommended";
     
-        // Render employees list
+        // Render employees list (will now reapply recommended & assigned highlights cleanly)
         this.filterEmployees();
     
         if (availFilter) {
@@ -862,10 +852,7 @@ class ProjectApp {
         ModalManager.show("editProjectModal");
     }
     
-    
-    
-    
-    
+
 // -----------------------------
 // Preload existing assignments
 // -----------------------------
@@ -894,15 +881,6 @@ getAssignableCount(projectId) {
     return Math.max(project.teamSize - assigned, 0);
 }
 
-
-// -----------------------------
-// Edit Project Modal
-// -----------------------------
-
-
-// -----------------------------
-// Render Employee Checkboxes in Modal
-// -----------------------------
 filterEmployees() {
     console.log("DEBUG: FastAPI recommendations:", this.recommendedIds);
 
@@ -988,25 +966,22 @@ filterEmployees() {
     this.updateSelectionCount();
 }
 
+updateSelectionCount() {
+    const assignedSet = this.assignedEmployees[this.currentProjectId] || new Set();
+    const checkboxes = document.querySelectorAll('.employee-checkbox');
 
+    const newlySelected = Array.from(checkboxes)
+        .filter(cb => cb.checked && !assignedSet.has(cb.dataset.userId))
+        .length;
 
-    
-    
-    
-    
-    
+    const totalSelected = assignedSet.size + newlySelected;
 
-    updateSelectionCount() {
-        const assignedSet = this.assignedEmployees[this.currentProjectId] || new Set();
-        const checkboxes = document.querySelectorAll('.employee-checkbox');
-        const newlySelected = Array.from(checkboxes).filter(cb => cb.checked).length;
-        const totalSelected = assignedSet.size + newlySelected;
-        
-        const selectedCountEl = document.getElementById('selectedCount');
-        if (selectedCountEl) {
-            selectedCountEl.textContent = totalSelected;
-        }
+    const selectedCountEl = document.getElementById('selectedCount');
+    if (selectedCountEl) {
+        selectedCountEl.textContent = totalSelected;
     }
+}
+
 
 
     async saveSelectedEmployees() {
@@ -1199,24 +1174,6 @@ filterEmployees() {
         }
     }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     updateAssignedUI() {
         const checkboxes = document.querySelectorAll('.employee-checkbox');
         const assignedSet = this.assignedEmployees[this.currentProjectId] || new Set();
@@ -1248,8 +1205,6 @@ filterEmployees() {
             selectedCountEl.textContent = checkedCount;
         }
     }
-    
-    
     
 
     openLogoutModal() {
