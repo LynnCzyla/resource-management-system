@@ -697,7 +697,7 @@ class RequestController {
         setTimeout(() => {
             ModalManager.hideLoading();
             MessageManager.success('Logged out successfully');
-            window.location.href = '../login.html';
+            window.location.href = '/login/HTML_Files/login.html';
         }, 1000);
     }
 

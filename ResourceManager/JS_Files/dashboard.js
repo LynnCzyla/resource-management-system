@@ -901,6 +901,7 @@ class DashboardApp {
     }
 
     setupEventListeners() {
+        // Filter button logic
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -908,26 +909,35 @@ class DashboardApp {
                 this.uiManager.renderDashboard(btn.dataset.period);
             });
         });
-
+    
+        // ✅ Simple logout confirmation
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => {
-                if (confirm('Are you sure you want to logout?')) {
+                const confirmLogout = confirm('Are you sure you want to log out?');
+                if (confirmLogout) {
+                    // Clear any saved session data (optional)
+                    localStorage.removeItem('loggedUser');
+    
+                    // Redirect to login page
+                    alert('You have been logged out successfully.');
                     window.location.href = "/login/HTML_Files/login.html";
                 }
             });
         }
-
+    
+        // Close view modal buttons
         const closeViewBtn = document.getElementById('closeViewEmployee');
         const closeModalBtn = document.getElementById('closeViewModalBtn');
-        
+    
         if (closeViewBtn) {
             closeViewBtn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
         }
         if (closeModalBtn) {
             closeModalBtn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
         }
-
+    
+        // Modal overlay click handling
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -937,6 +947,7 @@ class DashboardApp {
             });
         });
     }
+    
 }
 
 // ============================================

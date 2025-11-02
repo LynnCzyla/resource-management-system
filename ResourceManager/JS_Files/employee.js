@@ -153,17 +153,25 @@ class DataService {
                     end_date,
                     created_by,
                     users:created_by (id, name),
-                    project_requirements (quantity_needed)
-                `);
-
+                    project_requirements (quantity_needed),
+                    resource_requests (status)
+                `)
+                .eq('resource_requests.status', 'approved'); // Only approved requests
+    
             if (error) throw error;
-
-            return data.map(proj => this.transformProject(proj));
+    
+            // Filter out projects with no approved resource requests
+            const approvedProjects = data.filter(proj =>
+                (proj.resource_requests || []).some(req => req.status === 'approved')
+            );
+    
+            return approvedProjects.map(proj => this.transformProject(proj));
         } catch (error) {
             console.error('Error fetching projects:', error);
             throw new Error('Failed to load projects. Please try again.');
         }
     }
+    
 
     async getProjectById(id) {
         try {
@@ -920,7 +928,7 @@ class EmployeeApp {
             ModalManager.hideLoading();
             MessageManager.success('You have been logged out successfully.');
             localStorage.removeItem('loggedUser');
-            window.location.href = '../login.html';
+            window.location.href = '/login/HTML_Files/login.html';
         }, 1000);
     }
 }
