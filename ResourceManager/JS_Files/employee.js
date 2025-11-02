@@ -1,3 +1,5 @@
+import { supabase } from "../../supabaseClient.js";
+
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
@@ -11,24 +13,28 @@ function debounce(func, delay = 300) {
 }
 
 // ============================================
-// MODAL UTILITIES
+// MODAL MANAGER
 // ============================================
 
 class ModalManager {
     static show(modalId) {
         const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
+        if (!modal) {
+            console.warn(`Modal with id "${modalId}" not found`);
+            return;
         }
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
     }
 
     static hide(modalId) {
         const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.classList.remove('active');
-            document.body.style.overflow = '';
+        if (!modal) {
+            console.warn(`Modal with id "${modalId}" not found`);
+            return;
         }
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
     }
 
     static showLoading() {
@@ -41,26 +47,41 @@ class ModalManager {
 }
 
 // ============================================
-// MESSAGE UTILITIES
+// MESSAGE MANAGER
 // ============================================
 
 class MessageManager {
+    static ICON_MAP = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+
+    static AUTO_DISMISS_DELAY = 5000;
+
     static show(message, type = 'info') {
         const container = document.getElementById('messageContainer');
-        if (!container) return;
+        if (!container) {
+            console.warn('Message container not found');
+            return;
+        }
 
+        const messageBox = this.createMessageBox(message, type);
+        container.appendChild(messageBox);
+
+        setTimeout(() => {
+            messageBox.classList.add('fade-out');
+            setTimeout(() => messageBox.remove(), 300);
+        }, this.AUTO_DISMISS_DELAY);
+    }
+
+    static createMessageBox(message, type) {
         const messageBox = document.createElement('div');
         messageBox.className = `message-box ${type}`;
 
-        const iconMap = {
-            success: 'fa-check-circle',
-            error: 'fa-exclamation-circle',
-            warning: 'fa-exclamation-triangle',
-            info: 'fa-info-circle'
-        };
-
         const icon = document.createElement('i');
-        icon.className = `fas ${iconMap[type]}`;
+        icon.className = `fas ${this.ICON_MAP[type]}`;
 
         const text = document.createElement('span');
         text.textContent = message;
@@ -68,17 +89,17 @@ class MessageManager {
         const closeBtn = document.createElement('button');
         closeBtn.className = 'message-close';
         closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-        closeBtn.addEventListener('click', () => messageBox.remove());
+        closeBtn.setAttribute('aria-label', 'Close message');
+        closeBtn.addEventListener('click', () => {
+            messageBox.classList.add('fade-out');
+            setTimeout(() => messageBox.remove(), 300);
+        });
 
         messageBox.appendChild(icon);
         messageBox.appendChild(text);
         messageBox.appendChild(closeBtn);
 
-        container.appendChild(messageBox);
-
-        setTimeout(() => {
-            messageBox.remove();
-        }, 5000);
+        return messageBox;
     }
 
     static success(message) {
@@ -99,189 +120,255 @@ class MessageManager {
 }
 
 // ============================================
-// DATA SERVICE (In-Memory Storage)
+// DATA SERVICE
 // ============================================
 
 class DataService {
+    static EXPERIENCE_LEVEL_MAP = {
+        'beginner': 'Junior',
+        'intermediate': 'Mid-level',
+        'advanced': 'Senior'
+    };
+
+    static AVAILABILITY_MAP = {
+        'available': 'Available',
+        'partial': 'Partially Available',
+        'full': 'Busy',
+        'over': 'Overloaded'
+    };
+
     constructor() {
         this.projects = [];
         this.employees = [];
-        this.initializeMockData();
-    }
-
-    initializeMockData() {
-        this.projects = [
-            {
-                id: 'PROJ001',
-                name: 'Project Alpha',
-                status: 'active',
-                teamSize: 5,
-                progress: 65,
-                deadline: '2025-12-15',
-                manager: 'Sarah Williams',
-                skills: ['Python', 'React', 'AWS']
-            },
-            {
-                id: 'PROJ002',
-                name: 'Project Beta',
-                status: 'active',
-                teamSize: 3,
-                progress: 45,
-                deadline: '2025-11-30',
-                manager: 'John Anderson',
-                skills: ['Figma', 'Adobe XD', 'UI Design']
-            },
-            {
-                id: 'PROJ003',
-                name: 'Project Gamma',
-                status: 'pending',
-                teamSize: 4,
-                progress: 20,
-                deadline: '2026-01-20',
-                manager: 'Lisa Chen',
-                skills: ['Java', 'Spring Boot', 'SQL']
-            },
-            {
-                id: 'PROJ004',
-                name: 'Project Delta',
-                status: 'active',
-                teamSize: 6,
-                progress: 80,
-                deadline: '2025-11-10',
-                manager: 'Mark Taylor',
-                skills: ['Angular', 'Node.js', 'MongoDB']
-            },
-            {
-                id: 'PROJ005',
-                name: 'Project Epsilon',
-                status: 'completed',
-                teamSize: 4,
-                progress: 100,
-                deadline: '2025-10-01',
-                manager: 'Sarah Williams',
-                skills: ['Docker', 'Kubernetes', 'AWS']
-            }
-        ];
-
-        this.employees = [
-            {
-                id: 'EMP001',
-                name: 'John Doe',
-                role: 'Senior Developer',
-                department: 'Engineering',
-                skills: ['Python', 'JavaScript', 'React', 'Node.js'],
-                availability: 'full',
-                workloadHours: 8,
-                projects: ['Project Alpha'],
-                experience: '5 years',
-                avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=4A90E2&color=fff'
-            },
-            {
-                id: 'EMP002',
-                name: 'Jane Smith',
-                role: 'UI/UX Designer',
-                department: 'Design',
-                skills: ['Figma', 'Adobe XD', 'Photoshop', 'UI Design'],
-                availability: 'over',
-                workloadHours: 10,
-                projects: ['Project Beta', 'Project Gamma'],
-                experience: '4 years',
-                avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=7ED321&color=fff'
-            },
-            {
-                id: 'EMP003',
-                name: 'Mike Johnson',
-                role: 'Full Stack Developer',
-                department: 'Engineering',
-                skills: ['Java', 'Spring Boot', 'Angular', 'SQL'],
-                availability: 'partial',
-                workloadHours: 6,
-                projects: ['Project Delta'],
-                experience: '6 years',
-                avatar: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=F5A623&color=fff'
-            },
-            {
-                id: 'EMP004',
-                name: 'Sarah Williams',
-                role: 'Project Manager',
-                department: 'Management',
-                skills: ['Agile', 'Scrum', 'Jira', 'Team Leadership'],
-                availability: 'available',
-                workloadHours: 3,
-                projects: [],
-                experience: '7 years',
-                avatar: 'https://ui-avatars.com/api/?name=Sarah+Williams&background=D0021B&color=fff'
-            },
-            {
-                id: 'EMP005',
-                name: 'David Brown',
-                role: 'DevOps Engineer',
-                department: 'Engineering',
-                skills: ['Docker', 'Kubernetes', 'AWS', 'CI/CD'],
-                availability: 'over',
-                workloadHours: 9,
-                projects: ['Project Alpha', 'Project Epsilon'],
-                experience: '5 years',
-                avatar: 'https://ui-avatars.com/api/?name=David+Brown&background=4A90E2&color=fff'
-            },
-            {
-                id: 'EMP006',
-                name: 'Emily Davis',
-                role: 'Frontend Developer',
-                department: 'Engineering',
-                skills: ['Vue.js', 'CSS', 'HTML', 'TypeScript'],
-                availability: 'available',
-                workloadHours: 2,
-                projects: [],
-                experience: '3 years',
-                avatar: 'https://ui-avatars.com/api/?name=Emily+Davis&background=7ED321&color=fff'
-            },
-            {
-                id: 'EMP007',
-                name: 'Robert Martinez',
-                role: 'Backend Developer',
-                department: 'Engineering',
-                skills: ['Node.js', 'MongoDB', 'Express', 'GraphQL'],
-                availability: 'full',
-                workloadHours: 8,
-                projects: ['Project Beta'],
-                experience: '4 years',
-                avatar: 'https://ui-avatars.com/api/?name=Robert+Martinez&background=F5A623&color=fff'
-            },
-            {
-                id: 'EMP008',
-                name: 'Lisa Anderson',
-                role: 'QA Engineer',
-                department: 'Quality Assurance',
-                skills: ['Selenium', 'Jest', 'Automation', 'Testing'],
-                availability: 'partial',
-                workloadHours: 5,
-                projects: ['Project Alpha'],
-                experience: '3 years',
-                avatar: 'https://ui-avatars.com/api/?name=Lisa+Anderson&background=D0021B&color=fff'
-            }
-        ];
     }
 
     async getAllProjects() {
-        return Promise.resolve([...this.projects]);
+        try {
+            const { data, error } = await supabase
+                .from('projects')
+                .select(`
+                    id,
+                    name,
+                    status,
+                    end_date,
+                    created_by,
+                    users:created_by (id, name),
+                    project_requirements (quantity_needed)
+                `);
+
+            if (error) throw error;
+
+            return data.map(proj => this.transformProject(proj));
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+            throw new Error('Failed to load projects. Please try again.');
+        }
     }
 
     async getProjectById(id) {
-        return Promise.resolve(this.projects.find(proj => proj.id === id));
+        try {
+            const rawId = this.extractRawId(id, 'PROJ');
+
+            const { data, error } = await supabase
+                .from('projects')
+                .select(`
+                    id,
+                    name,
+                    status,
+                    end_date,
+                    users:created_by (name)
+                `)
+                .eq('id', rawId)
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error fetching project:', error);
+            throw new Error('Failed to load project details. Please try again.');
+        }
     }
 
     async getAllEmployees() {
-        return Promise.resolve([...this.employees]);
+        try {
+            const { data, error } = await supabase
+                .from('user_details')
+                .select(`
+                    employee_id,
+                    job_title,
+                    department,
+                    status,
+                    experience_level,
+                    skills,
+                    user_id,
+                    users:user_id (id, name, email, role)
+                `);
+
+            if (error) throw error;
+
+            // Filter out resource managers - keep only employees and project managers
+            const filteredEmployees = data.filter(emp => {
+                const role = emp.users?.role || '';
+                return role !== 'resource_manager';
+            });
+
+            return filteredEmployees.map(emp => this.transformEmployee(emp));
+        } catch (error) {
+            console.error('Error fetching employees:', error);
+            throw new Error('Failed to load employees. Please try again.');
+        }
     }
 
     async getEmployeeById(id) {
-        return Promise.resolve(this.employees.find(emp => emp.id === id));
+        try {
+            const { data, error } = await supabase
+                .from('user_details')
+                .select(`
+                    employee_id,
+                    job_title,
+                    department,
+                    status,
+                    experience_level,
+                    skills,
+                    user_id,
+                    users:user_id (id, name, email)
+                `)
+                .eq('employee_id', id)
+                .single();
+
+            if (error) throw error;
+
+            // Get assigned projects
+            const { data: assignments, error: assignError } = await supabase
+                .from('project_assignments')
+                .select('project:projects (name)')
+                .eq('user_id', data.user_id)
+                .eq('status', 'assigned');
+
+            if (assignError) {
+                console.warn('Error fetching assignments:', assignError);
+            }
+
+            const projectNames = assignments
+                ? assignments.map(a => a.project?.name).filter(Boolean)
+                : [];
+
+            return {
+                ...this.transformEmployee(data),
+                projects: projectNames
+            };
+        } catch (error) {
+            console.error('Error fetching employee:', error);
+            throw new Error('Failed to load employee details. Please try again.');
+        }
     }
 
-    getAllUniqueSkills() {
+    async assignEmployeeToProject(employeeUserId, projectId, role) {
+        try {
+            const { error } = await supabase
+                .from('project_assignments')
+                .insert([{
+                    project_id: parseInt(projectId),
+                    user_id: employeeUserId,
+                    role_in_project: role,
+                    status: 'assigned'
+                }]);
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            console.error('Error assigning employee:', error);
+            throw new Error('Failed to assign employee. Please try again.');
+        }
+    }
+
+    // Helper methods
+    transformProject(proj) {
+        const teamSize = (proj.project_requirements || []).reduce(
+            (sum, r) => sum + (r.quantity_needed || 0),
+            0
+        );
+
+        return {
+            id: `PROJ${String(proj.id).padStart(3, '0')}`,
+            rawId: proj.id,
+            name: proj.name,
+            status: proj.status,
+            teamSize,
+            progress: 0,
+            deadline: proj.end_date,
+            manager: proj.users?.name || 'N/A',
+            skills: []
+        };
+    }
+
+    transformEmployee(emp) {
+        const userName = emp.users?.name || 'Unnamed';
+        
+        return {
+            id: emp.employee_id,
+            userId: emp.user_id,
+            name: userName,
+            role: emp.job_title || 'No role specified',
+            department: emp.department || 'N/A',
+            skills: emp.skills || [],
+            availability: this.mapStatusToAvailability(emp.status),
+            workloadHours: this.getWorkloadFromStatus(emp.status),
+            projects: [],
+            experience: this.formatExperienceLevel(emp.experience_level),
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=random&color=fff`
+        };
+    }
+
+    extractRawId(id, prefix) {
+        return typeof id === 'string' && id.startsWith(prefix)
+            ? parseInt(id.replace(prefix, ''))
+            : id;
+    }
+
+    mapStatusToAvailability(status) {
+        if (!status) return 'available';
+        const statusLower = status.toLowerCase();
+
+        if (statusLower.includes('available') && !statusLower.includes('partial')) {
+            return 'available';
+        } else if (statusLower.includes('partial')) {
+            return 'partial';
+        } else if (statusLower.includes('busy')) {
+            return 'full';
+        } else if (statusLower.includes('overload')) {
+            return 'over';
+        }
+
+        return 'available';
+    }
+
+    getWorkloadFromStatus(status) {
+        if (!status) return 0;
+        const statusLower = status.toLowerCase();
+
+        if (statusLower.includes('available') && !statusLower.includes('partial')) {
+            return 2;
+        } else if (statusLower.includes('partial')) {
+            return 5;
+        } else if (statusLower.includes('busy')) {
+            return 8;
+        } else if (statusLower.includes('overload')) {
+            return 10;
+        }
+
+        return 0;
+    }
+
+    formatExperienceLevel(level) {
+        if (!level) return 'N/A';
+        const levelLower = level.toLowerCase();
+        return DataService.EXPERIENCE_LEVEL_MAP[levelLower] || level;
+    }
+
+    getUniqueSkills(employees) {
         const skillsSet = new Set();
-        this.employees.forEach(emp => {
+        employees.forEach(emp => {
             emp.skills.forEach(skill => skillsSet.add(skill));
         });
         return Array.from(skillsSet).sort();
@@ -299,16 +386,22 @@ class UIManager {
 
     renderEmployees(employees) {
         const grid = document.getElementById('employeeGrid');
-        
-        if (!grid) return;
+        if (!grid) {
+            console.warn('Employee grid container not found');
+            return;
+        }
 
         if (employees.length === 0) {
-            grid.innerHTML = '<p style="text-align: center; color: #6C757D; padding: 40px; grid-column: 1 / -1;">No employees found</p>';
+            grid.innerHTML = `
+                <div style="text-align: center; color: #6C757D; padding: 40px; grid-column: 1 / -1;">
+                    <i class="fas fa-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                    <p>No employees found</p>
+                </div>
+            `;
             return;
         }
 
         const fragment = document.createDocumentFragment();
-
         employees.forEach(emp => {
             const card = this.createEmployeeCard(emp);
             fragment.appendChild(card);
@@ -323,13 +416,20 @@ class UIManager {
         card.className = 'employee-card';
         card.dataset.empId = emp.id;
 
-        // Employee Header
+        card.appendChild(this.createEmployeeHeader(emp));
+        card.appendChild(this.createEmployeeSkills(emp));
+        card.appendChild(this.createEmployeeActions(emp));
+
+        return card;
+    }
+
+    createEmployeeHeader(emp) {
         const header = document.createElement('div');
         header.className = 'employee-header';
 
         const avatar = document.createElement('img');
         avatar.src = emp.avatar;
-        avatar.alt = emp.name;
+        avatar.alt = `${emp.name}'s avatar`;
         avatar.className = 'employee-avatar';
 
         const info = document.createElement('div');
@@ -344,7 +444,7 @@ class UIManager {
 
         const statusBadge = document.createElement('span');
         statusBadge.className = `status-badge ${emp.availability}`;
-        statusBadge.textContent = this.getAvailabilityText(emp.availability);
+        statusBadge.textContent = DataService.AVAILABILITY_MAP[emp.availability] || emp.availability;
 
         info.appendChild(name);
         info.appendChild(role);
@@ -353,7 +453,10 @@ class UIManager {
         header.appendChild(avatar);
         header.appendChild(info);
 
-        // Employee Skills
+        return header;
+    }
+
+    createEmployeeSkills(emp) {
         const skillsSection = document.createElement('div');
         skillsSection.className = 'employee-skills';
 
@@ -363,56 +466,51 @@ class UIManager {
         const skillsList = document.createElement('div');
         skillsList.className = 'skills-list';
 
-        emp.skills.forEach(skill => {
-            const skillTag = document.createElement('span');
-            skillTag.className = 'skill-tag';
-            skillTag.textContent = skill;
-            skillsList.appendChild(skillTag);
-        });
+        if (emp.skills.length === 0) {
+            skillsList.innerHTML = '<span style="color: #999; font-size: 14px;">No skills listed</span>';
+        } else {
+            emp.skills.forEach(skill => {
+                const skillTag = document.createElement('span');
+                skillTag.className = 'skill-tag';
+                skillTag.textContent = skill;
+                skillsList.appendChild(skillTag);
+            });
+        }
 
         skillsSection.appendChild(skillsTitle);
         skillsSection.appendChild(skillsList);
 
-        // Employee Actions
+        return skillsSection;
+    }
+
+    createEmployeeActions(emp) {
         const actions = document.createElement('div');
         actions.className = 'employee-actions';
 
         const viewBtn = document.createElement('button');
         viewBtn.className = 'btn-primary';
         viewBtn.innerHTML = '<i class="fas fa-eye"></i> View Profile';
-        viewBtn.onclick = () => app.viewEmployee(emp.id);
+        viewBtn.onclick = () => window.app.viewEmployee(emp.id);
 
         const assignBtn = document.createElement('button');
         assignBtn.className = 'btn-secondary';
         assignBtn.innerHTML = '<i class="fas fa-plus"></i> Assign';
-        assignBtn.onclick = () => app.assignEmployee(emp.id);
+        assignBtn.onclick = () => window.app.assignEmployee(emp.id);
 
         actions.appendChild(viewBtn);
         actions.appendChild(assignBtn);
 
-        // Assemble card
-        card.appendChild(header);
-        card.appendChild(skillsSection);
-        card.appendChild(actions);
-
-        return card;
-    }
-
-    getAvailabilityText(availability) {
-        const map = {
-            'available': 'Available',
-            'partial': 'Partially Available',
-            'full': 'Busy',
-            'over': 'Overloaded'
-        };
-        return map[availability] || availability;
+        return actions;
     }
 
     populateSkillsDropdown(dropdown, skills) {
-        if (!dropdown) return;
+        if (!dropdown) {
+            console.warn('Skills dropdown not found');
+            return;
+        }
 
         dropdown.innerHTML = '<option value="">All Skills</option>';
-        
+
         skills.forEach(skill => {
             const option = document.createElement('option');
             option.value = skill;
@@ -422,23 +520,38 @@ class UIManager {
     }
 
     populateProjectsDropdown(dropdown, projects) {
-        if (!dropdown) return;
+        if (!dropdown) {
+            console.warn('Projects dropdown not found');
+            return;
+        }
 
         dropdown.innerHTML = '<option value="">-- Select a project --</option>';
-        
-        projects.filter(p => p.status === 'active' || p.status === 'pending').forEach(proj => {
+
+        const activeProjects = projects.filter(p => 
+            p.status === 'ongoing' || p.status === 'pending'
+        );
+
+        activeProjects.forEach(proj => {
             const option = document.createElement('option');
-            option.value = proj.id;
+            option.value = proj.rawId;
             option.textContent = `${proj.name} (${proj.status})`;
             dropdown.appendChild(option);
         });
     }
 
     renderSkillsList(container, skills) {
-        if (!container) return;
+        if (!container) {
+            console.warn('Skills list container not found');
+            return;
+        }
+
+        if (skills.length === 0) {
+            container.innerHTML = '<span style="color: #999;">No skills listed</span>';
+            return;
+        }
 
         const fragment = document.createDocumentFragment();
-        
+
         skills.forEach(skill => {
             const span = document.createElement('span');
             span.className = 'skill-badge';
@@ -449,6 +562,51 @@ class UIManager {
         container.innerHTML = '';
         container.appendChild(fragment);
     }
+
+    populateEmployeeModal(employee) {
+        const fields = {
+            viewEmpName: employee.name,
+            viewEmpId: employee.id,
+            viewEmpRole: employee.role,
+            viewEmpDepartment: employee.department,
+            viewEmpExperience: employee.experience,
+            viewEmpWorkload: `${employee.workloadHours} hours/week`,
+            viewEmpProjects: employee.projects.length > 0 ? employee.projects.join(', ') : 'None'
+        };
+
+        Object.entries(fields).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        });
+
+        const avatar = document.getElementById('viewEmpAvatar');
+        if (avatar) avatar.src = employee.avatar;
+
+        const skillsContainer = document.getElementById('viewEmpSkills');
+        this.renderSkillsList(skillsContainer, employee.skills);
+    }
+
+    populateAssignmentModal(employee) {
+        const avatar = document.getElementById('assignEmpAvatar');
+        const name = document.getElementById('assignEmpName');
+        const role = document.getElementById('assignEmpRole');
+
+        if (avatar) avatar.src = employee.avatar;
+        if (name) name.textContent = employee.name;
+        if (role) role.textContent = employee.role;
+
+        // Set default start date to today
+        const today = new Date().toISOString().split('T')[0];
+        const startDateInput = document.getElementById('assignStartDate');
+        if (startDateInput) startDateInput.value = today;
+
+        // Reset form
+        const form = document.getElementById('assignEmployeeForm');
+        if (form) {
+            form.reset();
+            if (startDateInput) startDateInput.value = today;
+        }
+    }
 }
 
 // ============================================
@@ -456,82 +614,108 @@ class UIManager {
 // ============================================
 
 class EmployeeApp {
+    static MIN_HOURS = 1;
+    static MAX_HOURS = 40;
+
     constructor() {
         this.dataService = new DataService();
         this.uiManager = new UIManager(this.dataService);
-        
         this.debouncedSearch = debounce(() => this.filterEmployees(), 300);
-        
         this.currentEmployeeId = null;
         this.allEmployees = [];
     }
 
     async init() {
-        this.setupEventListeners();
-        await this.loadEmployees();
-        await this.loadSkillsFilter();
-        await this.loadProjectsForAssignment();
+        try {
+            this.setupEventListeners();
+            await this.loadEmployees();
+            await this.loadSkillsFilter();
+            await this.loadProjectsForAssignment();
+        } catch (error) {
+            console.error('Initialization error:', error);
+            MessageManager.error('Failed to initialize application');
+        }
     }
 
     setupEventListeners() {
-        // Logout button
+        this.setupLogoutListeners();
+        this.setupSearchAndFilters();
+        this.setupModalListeners();
+    }
+
+    setupLogoutListeners() {
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => this.openLogoutModal());
         }
 
-        // Search with debounce
+        const cancelLogoutBtn = document.getElementById('cancelLogout');
+        const confirmLogoutBtn = document.getElementById('confirmLogout');
+        if (cancelLogoutBtn) {
+            cancelLogoutBtn.addEventListener('click', () => ModalManager.hide('logoutModal'));
+        }
+        if (confirmLogoutBtn) {
+            confirmLogoutBtn.addEventListener('click', () => this.handleLogout());
+        }
+    }
+
+    setupSearchAndFilters() {
         const empSearch = document.getElementById('employeeSearch');
         if (empSearch) {
             empSearch.addEventListener('input', () => this.debouncedSearch());
         }
 
-        // Filters
         const skillFilter = document.getElementById('skillFilter');
         const availFilter = document.getElementById('availabilityFilter');
-        
+
         if (skillFilter) {
             skillFilter.addEventListener('change', () => this.filterEmployees());
         }
-        
+
         if (availFilter) {
             availFilter.addEventListener('change', () => this.filterEmployees());
         }
+    }
 
+    setupModalListeners() {
         // View Employee Modal
-        const closeViewBtn = document.getElementById('closeViewModal');
-        const closeProfileBtn = document.getElementById('closeProfileBtn');
-        
-        if (closeViewBtn) closeViewBtn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
-        if (closeProfileBtn) closeProfileBtn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
+        ['closeViewModal', 'closeProfileBtn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
+            }
+        });
 
         // Assign Employee Modal
-        const closeAssignBtn = document.getElementById('closeAssignModal');
-        const cancelAssignBtn = document.getElementById('cancelAssignBtn');
+        ['closeAssignModal', 'cancelAssignBtn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', () => ModalManager.hide('assignEmployeeModal'));
+            }
+        });
+
         const submitAssignBtn = document.getElementById('submitAssignBtn');
-        
-        if (closeAssignBtn) closeAssignBtn.addEventListener('click', () => ModalManager.hide('assignEmployeeModal'));
-        if (cancelAssignBtn) cancelAssignBtn.addEventListener('click', () => ModalManager.hide('assignEmployeeModal'));
-        if (submitAssignBtn) submitAssignBtn.addEventListener('click', () => this.submitAssignment());
+        if (submitAssignBtn) {
+            submitAssignBtn.addEventListener('click', () => this.submitAssignment());
+        }
 
         // Busy Employee Modal
         const cancelBusyBtn = document.getElementById('cancelBusyAssign');
         const proceedBusyBtn = document.getElementById('proceedBusyAssign');
-        
-        if (cancelBusyBtn) cancelBusyBtn.addEventListener('click', () => {
-            ModalManager.hide('busyEmployeeModal');
-            ModalManager.show('assignEmployeeModal');
-        });
-        if (proceedBusyBtn) proceedBusyBtn.addEventListener('click', () => {
-            ModalManager.hide('busyEmployeeModal');
-            this.submitAssignment(true);
-        });
 
-        // Logout Modal
-        const cancelLogoutBtn = document.getElementById('cancelLogout');
-        const confirmLogoutBtn = document.getElementById('confirmLogout');
-        if (cancelLogoutBtn) cancelLogoutBtn.addEventListener('click', () => ModalManager.hide('logoutModal'));
-        if (confirmLogoutBtn) confirmLogoutBtn.addEventListener('click', () => this.handleLogout());
+        if (cancelBusyBtn) {
+            cancelBusyBtn.addEventListener('click', () => {
+                ModalManager.hide('busyEmployeeModal');
+                ModalManager.show('assignEmployeeModal');
+            });
+        }
+
+        if (proceedBusyBtn) {
+            proceedBusyBtn.addEventListener('click', () => {
+                ModalManager.hide('busyEmployeeModal');
+                this.submitAssignment(true);
+            });
+        }
 
         // Close modals on overlay click
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
@@ -546,21 +730,24 @@ class EmployeeApp {
 
     async loadEmployees() {
         try {
+            ModalManager.showLoading();
             this.allEmployees = await this.dataService.getAllEmployees();
             this.uiManager.renderEmployees(this.allEmployees);
         } catch (error) {
-            console.error('Error loading employees:', error);
-            MessageManager.error('Failed to load employees');
+            MessageManager.error(error.message || 'Failed to load employees');
+            console.error(error);
+        } finally {
+            ModalManager.hideLoading();
         }
     }
 
     async loadSkillsFilter() {
         try {
-            const skills = this.dataService.getAllUniqueSkills();
+            const skills = this.dataService.getUniqueSkills(this.allEmployees);
             const dropdown = document.getElementById('skillFilter');
             this.uiManager.populateSkillsDropdown(dropdown, skills);
         } catch (error) {
-            console.error('Error loading skills:', error);
+            console.error('Error loading skills filter:', error);
         }
     }
 
@@ -571,47 +758,48 @@ class EmployeeApp {
             this.uiManager.populateProjectsDropdown(dropdown, projects);
         } catch (error) {
             console.error('Error loading projects:', error);
+            MessageManager.warning('Failed to load project list');
         }
     }
 
-    async filterEmployees() {
+    filterEmployees() {
         try {
             const searchInput = document.getElementById('employeeSearch');
             const skillFilter = document.getElementById('skillFilter');
             const availFilter = document.getElementById('availabilityFilter');
-            
+
             const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
             const selectedSkill = skillFilter ? skillFilter.value : '';
             const selectedAvail = availFilter ? availFilter.value : '';
-            
+
             let filtered = [...this.allEmployees];
-            
+
             // Filter by search query
             if (query) {
-                filtered = filtered.filter(emp => 
+                filtered = filtered.filter(emp =>
                     emp.name.toLowerCase().includes(query) ||
                     emp.role.toLowerCase().includes(query) ||
                     emp.department.toLowerCase().includes(query) ||
                     emp.skills.some(skill => skill.toLowerCase().includes(query))
                 );
             }
-            
+
             // Filter by skill
             if (selectedSkill) {
-                filtered = filtered.filter(emp => 
+                filtered = filtered.filter(emp =>
                     emp.skills.includes(selectedSkill)
                 );
             }
-            
+
             // Filter by availability
             if (selectedAvail) {
                 filtered = filtered.filter(emp => emp.availability === selectedAvail);
             }
-            
+
             this.uiManager.renderEmployees(filtered);
         } catch (error) {
             console.error('Error filtering employees:', error);
-            MessageManager.error('Error filtering employees');
+            MessageManager.error('Error applying filters');
         }
     }
 
@@ -620,31 +808,13 @@ class EmployeeApp {
             ModalManager.showLoading();
             const employee = await this.dataService.getEmployeeById(id);
             ModalManager.hideLoading();
-            
-            if (!employee) {
-                MessageManager.error('Employee not found');
-                return;
-            }
 
-            // Populate modal
-            document.getElementById('viewEmpName').textContent = employee.name;
-            document.getElementById('viewEmpAvatar').src = employee.avatar;
-            document.getElementById('viewEmpId').textContent = employee.id;
-            document.getElementById('viewEmpRole').textContent = employee.role;
-            document.getElementById('viewEmpDepartment').textContent = employee.department;
-            document.getElementById('viewEmpExperience').textContent = employee.experience;
-            document.getElementById('viewEmpWorkload').textContent = `${employee.workloadHours} hours/week`;
-            document.getElementById('viewEmpProjects').textContent = employee.projects.length > 0 ? employee.projects.join(', ') : 'None';
-
-            // Populate skills
-            const skillsContainer = document.getElementById('viewEmpSkills');
-            this.uiManager.renderSkillsList(skillsContainer, employee.skills);
-
+            this.uiManager.populateEmployeeModal(employee);
             ModalManager.show('viewEmployeeModal');
         } catch (error) {
             ModalManager.hideLoading();
-            console.error('Error viewing employee:', error);
-            MessageManager.error('Failed to load employee details');
+            MessageManager.error(error.message || 'Failed to load employee details');
+            console.error(error);
         }
     }
 
@@ -653,50 +823,32 @@ class EmployeeApp {
             ModalManager.showLoading();
             const employee = await this.dataService.getEmployeeById(id);
             ModalManager.hideLoading();
-            
-            if (!employee) {
-                MessageManager.error('Employee not found');
-                return;
-            }
 
             this.currentEmployeeId = id;
-
-            // Populate modal
-            document.getElementById('assignEmpAvatar').src = employee.avatar;
-            document.getElementById('assignEmpName').textContent = employee.name;
-            document.getElementById('assignEmpRole').textContent = employee.role;
-
-            // Set default start date to today
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('assignStartDate').value = today;
-
-            // Reset form
-            document.getElementById('assignEmployeeForm').reset();
-            document.getElementById('assignStartDate').value = today;
-
+            this.uiManager.populateAssignmentModal(employee);
             ModalManager.show('assignEmployeeModal');
         } catch (error) {
             ModalManager.hideLoading();
-            console.error('Error loading assignment modal:', error);
-            MessageManager.error('Failed to load employee details');
+            MessageManager.error(error.message || 'Failed to load employee details');
+            console.error(error);
         }
     }
 
     async submitAssignment(forceAssign = false) {
         try {
-            const form = document.getElementById('assignEmployeeForm');
-            const projectId = document.getElementById('assignProjectSelect').value;
-            const hours = document.getElementById('assignHours').value;
-            const startDate = document.getElementById('assignStartDate').value;
-            const notes = document.getElementById('assignNotes').value;
+            const projectId = document.getElementById('assignProjectSelect')?.value;
+            const hours = document.getElementById('assignHours')?.value;
+            const startDate = document.getElementById('assignStartDate')?.value;
 
+            // Validation
             if (!projectId) {
                 MessageManager.warning('Please select a project');
                 return;
             }
 
-            if (!hours || hours < 1 || hours > 40) {
-                MessageManager.warning('Please enter valid hours (1-40)');
+            const hoursNum = parseInt(hours);
+            if (!hours || hoursNum < EmployeeApp.MIN_HOURS || hoursNum > EmployeeApp.MAX_HOURS) {
+                MessageManager.warning(`Please enter valid hours (${EmployeeApp.MIN_HOURS}-${EmployeeApp.MAX_HOURS})`);
                 return;
             }
 
@@ -706,32 +858,53 @@ class EmployeeApp {
             }
 
             const employee = await this.dataService.getEmployeeById(this.currentEmployeeId);
-            
-            // Check if employee is busy
+
+            // Check if employee is overloaded (unless forcing assignment)
             if (!forceAssign && (employee.availability === 'full' || employee.availability === 'over')) {
-                const busyText = document.getElementById('busyEmployeeText');
-                busyText.textContent = `${employee.name} is currently ${employee.availability === 'full' ? 'fully allocated' : 'overloaded'} with ${employee.workloadHours} hours of work. Assigning them to another project may impact their performance. Do you want to proceed anyway?`;
-                
-                ModalManager.hide('assignEmployeeModal');
-                ModalManager.show('busyEmployeeModal');
+                this.showBusyWarning(employee);
                 return;
             }
 
-            ModalManager.hide('assignEmployeeModal');
-            ModalManager.showLoading();
-            
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            ModalManager.hideLoading();
-            MessageManager.success(`${employee.name} has been assigned to the project successfully!`);
-            
-            // Reload employees
-            await this.loadEmployees();
+            // Proceed with assignment
+            await this.performAssignment(employee, projectId);
         } catch (error) {
             ModalManager.hideLoading();
-            console.error('Error submitting assignment:', error);
-            MessageManager.error('Failed to assign employee');
+            MessageManager.error(error.message || 'Failed to assign employee');
+            console.error(error);
+        }
+    }
+
+    showBusyWarning(employee) {
+        const busyText = document.getElementById('busyEmployeeText');
+        const availText = employee.availability === 'full' ? 'fully allocated' : 'overloaded';
+        
+        if (busyText) {
+            busyText.textContent = `${employee.name} is currently ${availText} with ${employee.workloadHours} hours of work. Assigning them to another project may impact their performance. Do you want to proceed anyway?`;
+        }
+
+        ModalManager.hide('assignEmployeeModal');
+        ModalManager.show('busyEmployeeModal');
+    }
+
+    async performAssignment(employee, projectId) {
+        ModalManager.hide('assignEmployeeModal');
+        ModalManager.showLoading();
+
+        try {
+            await this.dataService.assignEmployeeToProject(
+                employee.userId,
+                projectId,
+                employee.role
+            );
+
+            ModalManager.hideLoading();
+            MessageManager.success(`${employee.name} has been assigned to the project successfully!`);
+
+            // Reload employees to reflect changes
+            await this.loadEmployees();
+            this.currentEmployeeId = null;
+        } catch (error) {
+            throw error;
         }
     }
 
@@ -740,42 +913,23 @@ class EmployeeApp {
     }
 
     async handleLogout() {
-        try {
-            // Hide the modal and show loading overlay
-            ModalManager.hide('logoutModal');
-            ModalManager.showLoading();
-    
-            // Sign out the user via Supabase
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-    
-            // Clear any local storage/session storage if used
-            localStorage.clear();
-            sessionStorage.clear();
-    
-            // Hide loading overlay
+        ModalManager.hide('logoutModal');
+        ModalManager.showLoading();
+
+        setTimeout(() => {
             ModalManager.hideLoading();
-    
-            // Optional: show a success message
             MessageManager.success('You have been logged out successfully.');
-    
-            // Redirect to login page
-            window.location.href = '/login/HTML_Files/login.html'; // <-- change path if needed
-        } catch (err) {
-            ModalManager.hideLoading();
-            console.error('Logout failed:', err);
-            MessageManager.error('Logout failed. Please try again.');
-        }
+            localStorage.removeItem('loggedUser');
+            window.location.href = '../login.html';
+        }, 1000);
     }
-    
 }
 
 // ============================================
 // INITIALIZATION
 // ============================================
 
-let app;
 document.addEventListener('DOMContentLoaded', () => {
-    app = new EmployeeApp();
-    app.init();
+    window.app = new EmployeeApp();
+    window.app.init();
 });

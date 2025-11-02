@@ -1,3 +1,6 @@
+// dashboard.js - Complete version with Today's Worklogs
+import { supabase } from "../../supabaseClient.js";
+
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
@@ -7,17 +10,6 @@ function debounce(func, delay = 300) {
     return function (...args) {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => func.apply(this, args), delay);
-    };
-}
-
-function throttle(func, limit = 200) {
-    let inThrottle;
-    return function (...args) {
-        if (!inThrottle) {
-            func.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
     };
 }
 
@@ -52,100 +44,369 @@ class ModalManager {
 }
 
 // ============================================
-// DATA MANAGEMENT (In-Memory Storage)
+// MESSAGE UTILITIES
 // ============================================
 
-let employeesData = [];
+function showSuccessMessage(message) {
+    const messageBox = document.createElement('div');
+    messageBox.className = 'message-box success';
+    messageBox.innerHTML = `<i class="fas fa-check-circle"></i><span>${message}</span>`;
+    messageBox.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 3000;
+        min-width: 300px;
+        padding: 16px;
+        background: #7ED321;
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    `;
+    
+    document.body.appendChild(messageBox);
+    setTimeout(() => messageBox.remove(), 3000);
+}
 
-function initializeData() {
-    if (employeesData.length === 0) {
-        employeesData = [
-            {
-                id: 1, name: "John Doe", role: "Senior Developer",
-                email: "john.doe@company.com",
-                skills: ["JavaScript", "React", "Node.js"],
-                avatar: "https://ui-avatars.com/api/?name=John+Doe&background=4A90E2&color=fff",
-                workload: { today: 8, week: [8, 8, 8, 7, 8], month: Array(30).fill(8) }
-            },
-            {
-                id: 2, name: "Jane Smith", role: "UI/UX Designer",
-                email: "jane.smith@company.com",
-                skills: ["Figma", "Adobe XD", "UI Design"],
-                avatar: "https://ui-avatars.com/api/?name=Jane+Smith&background=7ED321&color=fff",
-                workload: { today: 10, week: [10, 9, 10, 10, 8], month: Array(30).fill(9) }
-            },
-            {
-                id: 3, name: "Mike Johnson", role: "Full Stack Developer",
-                email: "mike.j@company.com",
-                skills: ["Python", "Django", "PostgreSQL"],
-                avatar: "https://ui-avatars.com/api/?name=Mike+Johnson&background=F5A623&color=fff",
-                workload: { today: 6, week: [6, 7, 5, 6, 6], month: Array(30).fill(6) }
-            },
-            {
-                id: 4, name: "Sarah Williams", role: "Project Manager",
-                email: "sarah.w@company.com",
-                skills: ["Agile", "Scrum", "Jira"],
-                avatar: "https://ui-avatars.com/api/?name=Sarah+Williams&background=D0021B&color=fff",
-                workload: { today: 3, week: [3, 4, 3, 2, 4], month: Array(30).fill(3) }
-            },
-            {
-                id: 5, name: "David Brown", role: "DevOps Engineer",
-                email: "david.b@company.com",
-                skills: ["Docker", "Kubernetes", "AWS"],
-                avatar: "https://ui-avatars.com/api/?name=David+Brown&background=4A90E2&color=fff",
-                workload: { today: 9, week: [9, 9, 8, 9, 10], month: Array(30).fill(9) }
-            },
-            {
-                id: 6, name: "Emily Davis", role: "Frontend Developer",
-                email: "emily.d@company.com",
-                skills: ["Vue.js", "CSS", "TypeScript"],
-                avatar: "https://ui-avatars.com/api/?name=Emily+Davis&background=7ED321&color=fff",
-                workload: { today: 2, week: [2, 3, 2, 1, 3], month: Array(30).fill(2) }
-            },
-            {
-                id: 7, name: "Robert Martinez", role: "Backend Developer",
-                email: "robert.m@company.com",
-                skills: ["Java", "Spring Boot", "MongoDB"],
-                avatar: "https://ui-avatars.com/api/?name=Robert+Martinez&background=F5A623&color=fff",
-                workload: { today: 8, week: [8, 8, 7, 8, 8], month: Array(30).fill(8) }
-            },
-            {
-                id: 8, name: "Lisa Anderson", role: "QA Engineer",
-                email: "lisa.a@company.com",
-                skills: ["Selenium", "Jest", "Testing"],
-                avatar: "https://ui-avatars.com/api/?name=Lisa+Anderson&background=D0021B&color=fff",
-                workload: { today: 5, week: [5, 6, 5, 5, 4], month: Array(30).fill(5) }
+function showErrorMessage(message) {
+    const messageBox = document.createElement('div');
+    messageBox.className = 'message-box error';
+    messageBox.innerHTML = `<i class="fas fa-exclamation-circle"></i><span>${message}</span>`;
+    messageBox.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 3000;
+        min-width: 300px;
+        padding: 16px;
+        background: #E74C3C;
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    `;
+    
+    document.body.appendChild(messageBox);
+    setTimeout(() => messageBox.remove(), 3000);
+}
+
+// ============================================
+// DATA SERVICE (Supabase Integration)
+// ============================================
+
+class DataService {
+    // Correct way to declare
+    async generateActiveProjects(userId, selectedDate = new Date()) {
+        try {
+            const dateStr = selectedDate.toISOString().split('T')[0];
+    
+            const { data, error } = await supabase
+                .from('project_assignments')
+                .select(`
+                    id,
+                    project_id,
+                    status,
+                    assigned_at,
+                    role_in_project,
+                    projects (
+                        id,
+                        name,
+                        start_date,
+                        end_date
+                    )
+                `)
+                .eq('user_id', userId)
+                .in('status', ['assigned', 'completed']);
+    
+            if (error) {
+                console.error('Error fetching active projects:', error);
+                return [];
             }
-        ];
+    
+            // Fetch all worklogs for the user
+            const { data: worklogsData, error: worklogsError } = await supabase
+                .from('worklogs')
+                .select('log_date, hours, project_id')
+                .eq('user_id', userId);
+    
+            if (worklogsError) {
+                console.error('Error fetching worklogs for projects:', worklogsError);
+            }
+    
+            const worklogs = Array.isArray(worklogsData) ? worklogsData : [];
+    
+            return data.map(pa => {
+                const projectHours = worklogs
+                    .filter(w => w.project_id === pa.project_id)
+                    .filter(w => new Date(w.log_date).toISOString().split('T')[0] === dateStr)
+                    .reduce((sum, w) => sum + (parseFloat(w.hours) || 0), 0);
+    
+                return {
+                    id: pa.project_id,
+                    name: pa.projects?.name || 'Unknown Project',
+                    status: pa.status,
+                    role: pa.role_in_project || 'Member',
+                    hours: projectHours
+                };
+            });
+    
+        } catch (err) {
+            console.error('Unexpected error in generateActiveProjects:', err);
+            return [];
+        }
+    }
+    
+    // Fetch all employees and their worklogs
+    async getAllEmployees(selectedDate = new Date()) {
+        try {
+            console.log('Fetching employees from database...');
+
+            const { data, error } = await supabase
+                .from('user_details')
+                .select(`
+                    employee_id,
+                    job_title,
+                    department,
+                    status,
+                    experience_level,
+                    skills,
+                    user_id,
+                    users:user_id (
+                        id,
+                        name,
+                        email,
+                        role
+                    )
+                `);
+
+            if (error) throw error;
+            if (!data || data.length === 0) return [];
+
+            // Filter only employees & project managers
+            const filteredData = data.filter(emp => {
+                const role = emp.users?.role || '';
+                return role === 'employee';
+            });
+
+            console.log('Filtered employees:', filteredData.length);
+
+            // Transform employees with workload & worklogs
+            const employees = await Promise.all(
+                filteredData.map(emp => this.transformEmployee(emp, selectedDate))
+            );
+
+            return employees.filter(emp => emp !== null);
+        } catch (err) {
+            console.error('Error in getAllEmployees:', err);
+            return [];
+        }
+    }
+
+    
+
+    // Transform single employee
+    async transformEmployee(emp, selectedDate = new Date()) {
+        // Ensure we have a valid userId
+        const userId = emp.userId || emp.users?.id;
+        if (!userId) {
+            console.warn('No user_id found for employee:', emp);
+            return null; // skip this employee
+        }
+    
+        const name = emp.name || emp.users?.name || 'Unknown';
+        console.log(`Fetching worklogs for userId: ${userId} employee: ${name}`);
+    
+        // Fetch worklogs safely
+        let worklogs = [];
+        try {
+            const { data: worklogsData, error } = await supabase
+                .from('worklogs')
+                .select('log_date, hours, work_type, work_description, status') 
+                .eq('user_id', Number(userId))
+                .order('log_date', { ascending: true });
+    
+            if (error) {
+                console.error(`Error fetching worklogs for ${name}:`, error);
+            }
+    
+            worklogs = Array.isArray(worklogsData) ? worklogsData : [];
+        } catch (err) {
+            console.error(`Unexpected error fetching worklogs for ${name}:`, err);
+        }
+    
+        // Calculate workload safely
+        const workload = await this.calculateWorkload(userId, selectedDate);
+        const status = getWorkloadStatus(workload.today);
+    
+        return {
+            id: emp.id || emp.employee_id,
+            userId: userId,
+            name: name,
+            role: emp.role || emp.job_title || 'No role',
+            email: emp.email || emp.users?.email || 'No email',
+            skills: Array.isArray(emp.skills) ? emp.skills : [],
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=4A90E2&color=fff`,
+            workload: workload,
+            worklogs: worklogs,
+            status: status,
+            userRole: emp.userRole || emp.users?.role || 'employee'
+        };
+    }
+    
+    
+    
+
+    // Calculate workload from worklogs array
+    // --- REPLACE DataService.calculateWorkload WITH THIS ---
+async calculateWorkload(userId, selectedDate = new Date()) {
+    try {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        console.log(`[DEBUG] Calculating workload for userId=${userId} on date=${dateStr}`);
+
+        const { data: worklogsData, error } = await supabase
+            .from('worklogs')
+            .select('log_date, hours')
+            .eq('user_id', userId);
+
+        if (error) {
+            console.error('[DEBUG] Supabase error:', error);
+            return { today: 0, week: Array(5).fill(0), month: Array(30).fill(0) };
+        }
+
+        const worklogs = Array.isArray(worklogsData) ? worklogsData : [];
+        console.log('[DEBUG] Retrieved worklogs:', worklogs);
+
+        // --- TODAY ---
+        const todayLogs = worklogs.filter(w => {
+            // normalize to YYYY-MM-DD string
+            const logDateStr = new Date(w.log_date).toISOString().split('T')[0];
+            return logDateStr === dateStr;
+        });
+        console.log('[DEBUG] Today logs:', todayLogs);
+        const todayHours = todayLogs.reduce((sum, w) => sum + (parseFloat(w.hours) || 0), 0);
+        console.log('[DEBUG] Today hours total:', todayHours);
+
+        // --- WEEK (Mon-Fri) using UTC-normalized days to avoid timezone drift ---
+        const weekHours = Array(5).fill(0);
+        const selectedDay = new Date(selectedDate);
+
+        // compute monday (local) but we'll convert to UTC midnight numbers for math
+        const diffToMonday = (selectedDay.getDay() + 6) % 7; // Monday => 0
+        const monday = new Date(selectedDay);
+        monday.setDate(selectedDay.getDate() - diffToMonday);
+
+        // UTC midnight numeric values
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const mondayUTC = Date.UTC(monday.getFullYear(), monday.getMonth(), monday.getDate());
+
+        console.log('[DEBUG] Week base (monday):', monday.toISOString().split('T')[0], 'mondayUTC:', mondayUTC);
+
+        worklogs.forEach(w => {
+            const logDate = new Date(w.log_date);
+            const logUTC = Date.UTC(logDate.getFullYear(), logDate.getMonth(), logDate.getDate());
+
+            const dayDiff = Math.floor((logUTC - mondayUTC) / msPerDay); // integer day difference
+            // only map Mon(0) .. Fri(4)
+            if (dayDiff >= 0 && dayDiff < 5) {
+                const h = parseFloat(w.hours) || 0;
+                weekHours[dayDiff] += h;
+                console.log(`[DEBUG] Mapping log ${logDate.toISOString().split('T')[0]} -> week index ${dayDiff} (+${h}h)`);
+            }
+        });
+        console.log('[DEBUG] Week hours:', weekHours);
+
+        // --- MONTH ---
+            // --- MONTH (Grouped by Week) ---
+        const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+
+        // Get all weeks within the month (max 5)
+        const monthWeeks = [];
+        let weekStart = new Date(monthStart);
+        weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)); // align to Monday
+
+        while (weekStart <= monthEnd) {
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+            monthWeeks.push({ start: new Date(weekStart), end: new Date(weekEnd), hours: 0 });
+            weekStart.setDate(weekStart.getDate() + 7);
+        }
+
+        // Aggregate hours into weeks
+        worklogs.forEach(w => {
+            const logDate = new Date(w.log_date);
+            if (
+                logDate.getFullYear() === selectedDate.getFullYear() &&
+                logDate.getMonth() === selectedDate.getMonth()
+            ) {
+                monthWeeks.forEach(week => {
+                    if (logDate >= week.start && logDate <= week.end) {
+                        week.hours += parseFloat(w.hours) || 0;
+                    }
+                });
+            }
+        });
+
+        // Convert to array of weekly totals
+        const monthHours = monthWeeks.map(w => w.hours);
+
+        console.log("[DEBUG] Month grouped weeks:", monthWeeks);
+
+
+        return {
+            today: todayHours,
+            week: weekHours,
+            month: monthHours
+        };
+
+    } catch (err) {
+        console.error('[DEBUG] Error calculating workload:', err);
+        return { today: 0, week: Array(5).fill(0), month: Array(30).fill(0) };
     }
 }
 
-function getEmployees() { return employeesData; }
-function saveEmployees(employees) { employeesData = employees; }
-function getEmployeeById(id) { return employeesData.find(e => e.id === id); }
+    
+    
+}
 
 // ============================================
 // WORKLOAD CALCULATIONS
 // ============================================
 
-function calculateWorkloadStats(period = 'today') {
-    const employees = getEmployees();
+function calculateWorkloadStats(employees, period = 'today') {
     const stats = {
-        total: employees.length, available: 0, partial: 0, fullyAllocated: 0,
-        overtime: 0, totalHours: 0, belowTarget: 0, atTarget: 0, overTarget: 0
+        total: employees.length,
+        available: 0,
+        partial: 0,
+        fullyAllocated: 0,
+        overtime: 0,
+        totalHours: 0,
+        belowTarget: 0,
+        atTarget: 0,
+        overTarget: 0
     };
 
     employees.forEach(emp => {
         let hours = 0;
-        if (period === 'today') hours = emp.workload.today;
-        else if (period === 'week') hours = emp.workload.week.reduce((a, b) => a + b, 0) / emp.workload.week.length;
-        else if (period === 'month') hours = emp.workload.month.reduce((a, b) => a + b, 0) / emp.workload.month.length;
+        if (period === 'today') {
+            hours = emp.workload.today;
+        } else if (period === 'week') {
+            hours = emp.workload.week.reduce((a, b) => a + b, 0) / emp.workload.week.length;
+        } else if (period === 'month') {
+            hours = emp.workload.month.reduce((a, b) => a + b, 0) / emp.workload.month.length;
+        }
 
         stats.totalHours += hours;
+        
         if (hours < 4) stats.available++;
         else if (hours >= 4 && hours < 8) stats.partial++;
         else if (hours === 8) stats.fullyAllocated++;
-        else stats.overtime++;
+        else if (hours > 8) stats.overtime++;
 
         if (hours < 8) stats.belowTarget++;
         else if (hours === 8) stats.atTarget++;
@@ -163,128 +424,253 @@ function getWorkloadStatus(hours) {
     return 'over';
 }
 
-// ============================================
-// RENDER FUNCTIONS
-// ============================================
-
-function renderDashboard(period = 'today') {
-    const stats = calculateWorkloadStats(period);
-    const statsElements = {
-        totalEmployees: document.getElementById('totalEmployees'),
-        availableEmployees: document.getElementById('availableEmployees'),
-        partialEmployees: document.getElementById('partialEmployees'),
-        fullyAllocated: document.getElementById('fullyAllocated'),
-        avgHours: document.getElementById('avgHours'),
-        belowTarget: document.getElementById('belowTarget'),
-        atTarget: document.getElementById('atTarget'),
-        overTarget: document.getElementById('overTarget')
-    };
-
-    if (statsElements.totalEmployees) statsElements.totalEmployees.textContent = stats.total;
-    if (statsElements.availableEmployees) statsElements.availableEmployees.textContent = stats.available;
-    if (statsElements.partialEmployees) statsElements.partialEmployees.textContent = stats.partial;
-    if (statsElements.fullyAllocated) statsElements.fullyAllocated.textContent = stats.fullyAllocated;
-    if (statsElements.avgHours) statsElements.avgHours.textContent = stats.avgHours + 'h';
-    if (statsElements.belowTarget) statsElements.belowTarget.textContent = stats.belowTarget;
-    if (statsElements.atTarget) statsElements.atTarget.textContent = stats.atTarget;
-    if (statsElements.overTarget) statsElements.overTarget.textContent = stats.overTarget;
-
-    renderTimeline(period);
+function getStatusLabel(hours) {
+    const status = getWorkloadStatus(hours);
+    switch(status) {
+        case 'available': return 'Available';
+        case 'partial': return 'Partial';
+        case 'full': return 'Fully Allocated';
+        case 'over': return 'Overtime';
+        default: return 'Unknown';
+    }
 }
 
-function renderTimeline(period = 'today') {
-    const employees = getEmployees();
-    const timelineRows = document.getElementById('timelineRows');
-    const timelineDates = document.getElementById('timelineDates');
-
-    if (!timelineRows || !timelineDates) return;
-
-    const rowsFragment = document.createDocumentFragment();
-    timelineRows.textContent = '';
-    timelineDates.textContent = '';
-
-    renderTimelineDates(period, timelineDates);
-    employees.forEach(emp => {
-        const row = createEmployeeRow(emp, period);
-        rowsFragment.appendChild(row);
-    });
-
-    timelineRows.appendChild(rowsFragment);
+function getStatusColor(hours) {
+    const status = getWorkloadStatus(hours);
+    switch(status) {
+        case 'available': return '#27AE60';  // green
+        case 'partial': return '#F1C40F';    // yellow
+        case 'full': return '#3498DB';       // blue
+        case 'over': return '#E74C3C';       // red
+        default: return '#95A5A6';           // gray
+    }
 }
 
-function renderTimelineDates(period, container) {
-    const dateHeader = document.createElement('div');
-    dateHeader.className = 'timeline-date-cell';
-    dateHeader.textContent = 'Employee';
-    container.appendChild(dateHeader);
+// ============================================
+// UI MANAGER
+// ============================================
+
+class UIManager {
+    constructor(dataService) {
+        this.dataService = dataService;
+        this.employees = [];
+        this.filteredEmployees = [];
+        this.currentPeriod = 'today';
+        this.selectedDate = new Date();
+        this.searchQuery = '';
+    }
+
+    async loadEmployees() {
+        try {
+            ModalManager.showLoading();
+            this.employees = await Promise.all(
+                (await this.dataService.getAllEmployees()).map(emp => 
+                    this.dataService.transformEmployee(emp, this.selectedDate)
+                )
+            );
+            this.filteredEmployees = [...this.employees];
+            ModalManager.hideLoading();
+            this.renderDashboard(this.currentPeriod);
+        } catch (error) {
+            ModalManager.hideLoading();
+            showErrorMessage('Failed to load employee data');
+        }
+    }
     
-    if (period === 'today') {
-        const cell = document.createElement('div');
-        cell.className = 'timeline-date-cell';
-        cell.textContent = 'Sun, Oct 26';
-        container.appendChild(cell);
-    } else if (period === 'week') {
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-        days.forEach((day, i) => {
-            const cell = document.createElement('div');
-            cell.className = 'timeline-date-cell';
-            cell.textContent = `${day}, Oct ${22 + i}`;
-            container.appendChild(cell);
+
+    filterEmployees() {
+        this.filteredEmployees = this.employees.filter(emp => {
+            const matchesSearch = emp.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                                emp.role.toLowerCase().includes(this.searchQuery.toLowerCase());
+            return matchesSearch;
         });
-    } else if (period === 'month') {
-        for (let i = 1; i <= 7; i++) {
+        
+        this.renderDashboard(this.currentPeriod);
+    }
+
+    setSearchQuery(query) {
+        this.searchQuery = query;
+        this.filterEmployees();
+    }
+
+    async setSelectedDate(date) {
+        this.selectedDate = new Date(date);
+        console.log('[DEBUG] Selected date changed to:', this.selectedDate.toISOString().split('T')[0]);
+    
+        // Recalculate workloads for all employees
+        await Promise.all(
+            this.employees.map(async emp => {
+                console.log(`[DEBUG] Recalculating workload for: ${emp.name} (userId=${emp.userId})`);
+                emp.workload = await this.dataService.calculateWorkload(emp.userId, this.selectedDate);
+                console.log(`[DEBUG] New workload for ${emp.name}:`, emp.workload);
+                emp.status = getWorkloadStatus(emp.workload.today);
+            })
+        );
+    
+        // Refresh filtered list and render dashboard
+        this.filteredEmployees = [...this.employees];
+        console.log('[DEBUG] Filtered employees ready for rendering:', this.filteredEmployees.map(e => e.name));
+        this.renderDashboard(this.currentPeriod);
+    }
+    
+    
+
+    renderDashboard(period = 'today') {
+        this.currentPeriod = period;
+        const stats = calculateWorkloadStats(this.filteredEmployees, period);
+        
+        console.log('Dashboard stats:', stats);
+        
+        this.updateStatsCard('totalEmployees', stats.total);
+        this.updateStatsCard('availableEmployees', stats.available);
+        this.updateStatsCard('partialEmployees', stats.partial);
+        this.updateStatsCard('fullyAllocated', stats.fullyAllocated);
+        this.updateStatsCard('avgHours', stats.avgHours + 'h');
+        this.updateStatsCard('belowTarget', stats.belowTarget);
+        this.updateStatsCard('atTarget', stats.atTarget);
+        this.updateStatsCard('overTarget', stats.overTarget);
+
+        this.renderTimeline(period);
+    }
+
+    updateStatsCard(elementId, value) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = value;
+        }
+    }
+
+    renderTimeline(period = 'today') {
+        const timelineRows = document.getElementById('timelineRows');
+        const timelineDates = document.getElementById('timelineDates');
+
+        if (!timelineRows || !timelineDates) {
+            console.error('Timeline containers not found');
+            return;
+        }
+
+        console.log('Rendering timeline for period:', period);
+        console.log('Employees to render:', this.filteredEmployees.length);
+
+        timelineRows.innerHTML = '';
+        timelineDates.innerHTML = '';
+
+        this.renderTimelineDates(period, timelineDates);
+        
+        const rowsFragment = document.createDocumentFragment();
+        this.filteredEmployees.forEach(emp => {
+            const row = this.createEmployeeRow(emp, period);
+            rowsFragment.appendChild(row);
+        });
+
+        timelineRows.appendChild(rowsFragment);
+    }
+
+    renderTimelineDates(period, container) {
+        const dateHeader = document.createElement('div');
+        dateHeader.className = 'timeline-date-cell';
+        dateHeader.textContent = 'Employee';
+        container.appendChild(dateHeader);
+    
+        if (period === 'today') {
             const cell = document.createElement('div');
             cell.className = 'timeline-date-cell';
-            cell.textContent = `Week ${i}`;
+            cell.textContent = this.selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
             container.appendChild(cell);
-        }
+        } else if (period === 'week') {
+            const selectedDay = new Date(this.selectedDate);
+            const diffToMonday = (selectedDay.getDay() + 6) % 7;
+            const monday = new Date(selectedDay);
+            monday.setDate(selectedDay.getDate() - diffToMonday);
+    
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+            for (let i = 0; i < 5; i++) {
+                const cellDate = new Date(monday);
+                cellDate.setDate(monday.getDate() + i);
+    
+                const cell = document.createElement('div');
+                cell.className = 'timeline-date-cell';
+                cell.textContent = `${days[i]} ${cellDate.getDate()}/${cellDate.getMonth() + 1}`;
+                container.appendChild(cell);
+            }
+        } else if (period === 'month') {
+            for (let i = 1; i <= 5; i++) { // usually 4–5 weeks
+                const cell = document.createElement('div');
+                cell.className = 'timeline-date-cell';
+                cell.textContent = `Week ${i}`;
+                container.appendChild(cell);
+            }
+        }        
     }
-}
+    
 
-function createEmployeeRow(emp, period) {
-    const row = document.createElement('div');
-    row.className = 'timeline-row';
-
-    const employeeCell = document.createElement('div');
-    employeeCell.className = 'employee-cell';
+    createEmployeeRow(emp, period) {
+        const row = document.createElement('div');
+        row.className = 'timeline-row';
     
-    const img = document.createElement('img');
-    img.src = emp.avatar;
-    img.alt = emp.name;
-    
-    const infoDiv = document.createElement('div');
-    infoDiv.className = 'employee-cell-info';
-    
-    const h4 = document.createElement('h4');
-    h4.textContent = emp.name;
-    
-    const p = document.createElement('p');
-    p.textContent = emp.role;
-    
-    infoDiv.appendChild(h4);
-    infoDiv.appendChild(p);
-    employeeCell.appendChild(img);
-    employeeCell.appendChild(infoDiv);
-    row.appendChild(employeeCell);
-
-    if (period === 'today') {
-        row.appendChild(createWorkloadCell(emp.workload.today));
-    } else if (period === 'week') {
-        emp.workload.week.forEach(hours => row.appendChild(createWorkloadCell(hours)));
-    } else if (period === 'month') {
-        for (let i = 0; i < 7; i++) {
-            const weekStart = i * 4;
-            const weekEnd = Math.min(weekStart + 4, emp.workload.month.length);
-            const weekHours = emp.workload.month.slice(weekStart, weekEnd);
-            const avgHours = Math.round(weekHours.reduce((a, b) => a + b, 0) / weekHours.length);
-            row.appendChild(createWorkloadCell(avgHours));
+        // -----------------------------
+        // Employee Cell
+        // -----------------------------
+        const employeeCell = document.createElement('div');
+        employeeCell.className = 'employee-cell';
+        
+        if (period === 'today') {
+            employeeCell.style.cursor = 'pointer';
+            employeeCell.onclick = () => openViewEmployeeModal(emp.id);
+        } else {
+            employeeCell.style.cursor = 'default';
+            employeeCell.title = "Modal view only available for today";
         }
+    
+        const img = document.createElement('img');
+        img.src = emp.avatar;
+        img.alt = emp.name;
+    
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'employee-cell-info';
+    
+        const h4 = document.createElement('h4');
+        h4.textContent = emp.name;
+    
+        const p = document.createElement('p');
+        p.textContent = emp.role;
+    
+        const statusSpan = document.createElement('span');
+        statusSpan.textContent = getStatusLabel(emp.workload.today);
+        statusSpan.style.color = getStatusColor(emp.workload.today);
+        statusSpan.style.fontWeight = 'bold';
+        statusSpan.style.marginLeft = '6px';
+    
+        infoDiv.appendChild(h4);
+        infoDiv.appendChild(p);
+        employeeCell.appendChild(img);
+        employeeCell.appendChild(infoDiv);
+        row.appendChild(employeeCell);
+    
+        // -----------------------------
+        // Workload Cell
+        // -----------------------------
+        if (period === 'week') {
+            emp.workload.week.forEach(hours => {
+                const cell = this.createWorkloadCell(hours);
+                row.appendChild(cell);
+            });
+        } else if (period === 'month') {
+            emp.workload.month.forEach(hours => {
+                const cell = this.createWorkloadCell(hours);
+                row.appendChild(cell);
+            });
+        } else {
+            const cell = this.createWorkloadCell(emp.workload.today);
+            row.appendChild(cell);
+        }
+    
+        return row;
     }
-
-    return row;
-}
-
-function createWorkloadCell(hours) {
+    
+    
+   // --- REPLACE UIManager.createWorkloadCell WITH THIS ---
+createWorkloadCell(hours) {
     const cell = document.createElement('div');
     cell.className = 'workload-cell';
     
@@ -292,14 +678,15 @@ function createWorkloadCell(hours) {
     bar.className = 'workload-bar';
     
     const fill = document.createElement('div');
-    const status = getWorkloadStatus(hours);
-    const percentage = Math.min((hours / 8) * 100, 100);
+    const hrs = parseFloat(hours) || 0; 
+    const status = getWorkloadStatus(hrs);
+    const percentage = Math.min((hrs / 8) * 100, 125);
     fill.className = `workload-fill ${status}`;
     fill.style.width = `${percentage}%`;
     
     const label = document.createElement('span');
     label.className = 'workload-label';
-    label.textContent = `${hours}h`;
+    label.textContent = `${hrs.toFixed(1)}h`;
     
     fill.appendChild(label);
     bar.appendChild(fill);
@@ -308,306 +695,246 @@ function createWorkloadCell(hours) {
     return cell;
 }
 
-// ============================================
-// EMPLOYEE MANAGEMENT - ADD
-// ============================================
-
-function openAddEmployeeModal() {
-    document.getElementById('addEmployeeForm').reset();
-    ModalManager.show('addEmployeeModal');
 }
 
-function handleAddEmployee() {
-    const name = document.getElementById('empName').value.trim();
-    const role = document.getElementById('empRole').value.trim();
-    const email = document.getElementById('empEmail').value.trim();
-    const skillsInput = document.getElementById('empSkills').value.trim();
-    const workload = parseInt(document.getElementById('empWorkload').value) || 0;
+// ============================================
+// FILTER AND SEARCH FUNCTIONS
+// ============================================
 
-    if (!name || !role || !email || !skillsInput) {
-        alert('Please fill all fields');
-        return;
-    }
+function setupDateFilter() {
+    const dateInput = document.getElementById('dateFilter');
+    if (!dateInput) return;
 
-    const employees = getEmployees();
-    const newId = Math.max(...employees.map(e => e.id), 0) + 1;
-    
-    const newEmployee = {
-        id: newId,
-        name: name,
-        role: role,
-        email: email,
-        skills: skillsInput.split(',').map(s => s.trim()),
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=4A90E2&color=fff`,
-        workload: {
-            today: workload,
-            week: Array(5).fill(workload),
-            month: Array(30).fill(workload)
+    // Set default value to today
+    dateInput.value = new Date().toISOString().split('T')[0];
+
+    // Add event listener
+    dateInput.addEventListener('change', (e) => {
+        if (app && app.uiManager) {
+            app.uiManager.setSelectedDate(e.target.value);
         }
-    };
-
-    employees.push(newEmployee);
-    saveEmployees(employees);
-    
-    ModalManager.hide('addEmployeeModal');
-    showSuccessMessage(`${newEmployee.name} has been added successfully.`);
-    renderDashboard();
-}
-
-// ============================================
-// EMPLOYEE MANAGEMENT - EDIT
-// ============================================
-
-function openEditEmployeeModal(id) {
-    const employee = getEmployeeById(id);
-    if (!employee) return;
-
-    document.getElementById('editEmpId').value = employee.id;
-    document.getElementById('editEmpName').value = employee.name;
-    document.getElementById('editEmpRole').value = employee.role;
-    document.getElementById('editEmpEmail').value = employee.email;
-    document.getElementById('editEmpSkills').value = employee.skills.join(', ');
-    document.getElementById('editEmpWorkload').value = employee.workload.today;
-
-    ModalManager.show('editEmployeeModal');
-}
-
-function handleEditEmployee() {
-    const id = parseInt(document.getElementById('editEmpId').value);
-    const name = document.getElementById('editEmpName').value.trim();
-    const role = document.getElementById('editEmpRole').value.trim();
-    const email = document.getElementById('editEmpEmail').value.trim();
-    const skillsInput = document.getElementById('editEmpSkills').value.trim();
-    const workload = parseInt(document.getElementById('editEmpWorkload').value);
-
-    if (!name || !role || !email || !skillsInput) {
-        alert('Please fill all fields');
-        return;
-    }
-
-    const employees = getEmployees();
-    const employee = employees.find(e => e.id === id);
-    
-    if (employee) {
-        employee.name = name;
-        employee.role = role;
-        employee.email = email;
-        employee.skills = skillsInput.split(',').map(s => s.trim());
-        employee.workload.today = workload;
-        saveEmployees(employees);
-        
-        ModalManager.hide('editEmployeeModal');
-        showSuccessMessage('Employee information has been updated.');
-        renderDashboard();
-    }
-}
-
-// ============================================
-// EMPLOYEE MANAGEMENT - VIEW
-// ============================================
-
-let currentViewEmployeeId = null;
-
-function openViewEmployeeModal(id) {
-    const employee = getEmployeeById(id);
-    if (!employee) return;
-
-    currentViewEmployeeId = id;
-
-    document.getElementById('viewEmpName').textContent = employee.name;
-    document.getElementById('viewEmpAvatar').src = employee.avatar;
-    document.getElementById('viewEmpRole').textContent = employee.role;
-    document.getElementById('viewEmpEmail').textContent = employee.email;
-    document.getElementById('viewEmpWorkload').textContent = `${employee.workload.today}h / 8h`;
-
-    const skillsContainer = document.getElementById('viewEmpSkills');
-    skillsContainer.innerHTML = '';
-    employee.skills.forEach(skill => {
-        const badge = document.createElement('span');
-        badge.className = 'skill-badge';
-        badge.textContent = skill;
-        skillsContainer.appendChild(badge);
     });
+}
 
+function setupSearchBox() {
+    const searchInput = document.getElementById('employeeSearch');
+    if (!searchInput) return;
+
+    // Add event listener with debounce
+    const debouncedSearch = debounce((value) => {
+        if (app && app.uiManager) {
+            app.uiManager.setSearchQuery(value);
+        }
+    }, 300);
+
+    searchInput.addEventListener('input', (e) => {
+        debouncedSearch(e.target.value);
+    });
+}
+
+// ============================================
+// EMPLOYEE ACTIVITY MODAL
+// ============================================
+
+async function generateEmployeeActivityData(employee, selectedDate) {
+    const dateStr = selectedDate.toISOString().split('T')[0];
+
+    const todayLogs = employee.worklogs?.filter(w => {
+        const logDateStr = new Date(w.log_date).toISOString().split('T')[0];
+        return logDateStr === dateStr;
+    }) || [];
+
+    const totalHours = todayLogs.reduce((sum, w) => sum + parseFloat(w.hours || 0), 0);
+
+    // --- Compute Completed vs In Progress ---
+    const completedCount = todayLogs.filter(
+        w => (w.status || '').toLowerCase().replace(/\s+/g, '_') === 'completed'
+    ).length;
+    
+    const inProgressCount = todayLogs.filter(
+        w => (w.status || '').toLowerCase().replace(/\s+/g, '_') === 'in_progress'
+    ).length;
+    
+
+     const activeProjects = await app.dataService.generateActiveProjects(employee.userId, selectedDate);
+
+    return {
+        summary: {
+            totalHours,
+            activeProjects: activeProjects.length,
+            completedTasks: completedCount,
+            inProgressTasks: inProgressCount
+        },
+        schedule: todayLogs.map(w => ({
+            time: '', 
+            title: w.work_type,
+            description: `${w.work_description} - ${w.hours}h`,
+            status: w.status || 'pending',
+            duration: parseFloat(w.hours)
+        })),
+        projects: activeProjects
+    };
+}
+
+
+function formatTime(hours) {
+    const hour24 = Math.floor(hours);
+    const minutes = Math.round((hours - hour24) * 60);
+    const period = hour24 >= 12 ? 'PM' : 'AM';
+    const hour12 = hour24 > 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24);
+    
+    return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
+async function openViewEmployeeModal(employeeId) {
+    const employee = app.uiManager.employees.find(e => e.id === employeeId);
+    if (!employee) return console.error('Employee not found:', employeeId);
+
+    // Ensure worklogs array exists
+    if (!Array.isArray(employee.worklogs)) {
+        employee.worklogs = [];
+    }
+
+    // Await async activity data
+    const activityData = await generateEmployeeActivityData(employee, app.uiManager.selectedDate);
+
+    const statusLabel = document.getElementById('viewEmpStatus');
+        if(statusLabel) {
+            statusLabel.textContent = getStatusLabel(employee.workload.today);
+            statusLabel.style.color = getStatusColor(employee.workload.today);
+            statusLabel.style.fontWeight = 'bold';
+        }
+
+    // Set employee info
+    document.getElementById('viewEmpName').textContent = employee.name || 'Unknown';
+    document.getElementById('viewEmpRole').textContent = employee.role || 'No role';
+    document.getElementById('viewEmpAvatar').src = employee.avatar || 'https://ui-avatars.com/api/?name=Unknown&background=4A90E2&color=fff';
+
+    document.getElementById('viewEmpStatus').textContent = employee.status || 'No status';
+
+    // Safely set task numbers and hours
+    document.getElementById('tasksCompleted').textContent = activityData.summary?.completedTasks || 0;
+    document.getElementById('tasksInProgress').textContent = activityData.summary?.inProgressTasks || 0;
+    document.getElementById('totalHoursToday').textContent = (activityData.summary?.totalHours || 0) + 'h';
+    document.getElementById('activeProjects').textContent = activityData.summary?.activeProjects || 0;
+
+    // Render timeline and active projects
+    renderDailySchedule(activityData.schedule || []);
+    renderActiveProjects(activityData.projects || []);
+
+    // Show modal
     ModalManager.show('viewEmployeeModal');
 }
 
-function handleEditFromView() {
-    ModalManager.hide('viewEmployeeModal');
-    openEditEmployeeModal(currentViewEmployeeId);
-}
 
-function handleDeleteFromView() {
-    ModalManager.hide('viewEmployeeModal');
-    openConfirmDeleteModal(currentViewEmployeeId);
-}
 
-// ============================================
-// EMPLOYEE MANAGEMENT - DELETE
-// ============================================
+function renderDailySchedule(schedule) {
+    const container = document.getElementById('dailyTimeline');
+    if (!container) return;
 
-let employeeToDelete = null;
-
-function openConfirmDeleteModal(id) {
-    const employee = getEmployeeById(id);
-    if (!employee) return;
-
-    employeeToDelete = id;
-    document.getElementById('deleteConfirmText').textContent = 
-        `Are you sure you want to delete ${employee.name}?`;
-    
-    ModalManager.show('confirmDeleteModal');
-}
-
-function handleDeleteEmployee() {
-    if (employeeToDelete === null) return;
-
-    const employees = getEmployees();
-    const updatedEmployees = employees.filter(e => e.id !== employeeToDelete);
-    saveEmployees(updatedEmployees);
-
-    ModalManager.hide('confirmDeleteModal');
-    showSuccessMessage('Employee has been deleted.');
-    employeeToDelete = null;
-    renderDashboard();
-}
-
-// ============================================
-// SUCCESS/ERROR MESSAGES
-// ============================================
-
-function showSuccessMessage(message) {
-    const messageBox = document.createElement('div');
-    messageBox.className = 'message-box success';
-    messageBox.innerHTML = `<i class="fas fa-check-circle"></i><span>${message}</span>`;
-    
-    document.body.appendChild(messageBox);
-    messageBox.style.position = 'fixed';
-    messageBox.style.top = '20px';
-    messageBox.style.right = '20px';
-    messageBox.style.zIndex = '3000';
-    messageBox.style.minWidth = '300px';
-    
-    setTimeout(() => {
-        messageBox.remove();
-    }, 3000);
-}
-
-function showErrorMessage(message) {
-    const messageBox = document.createElement('div');
-    messageBox.className = 'message-box error';
-    messageBox.innerHTML = `<i class="fas fa-exclamation-circle"></i><span>${message}</span>`;
-    
-    document.body.appendChild(messageBox);
-    messageBox.style.position = 'fixed';
-    messageBox.style.top = '20px';
-    messageBox.style.right = '20px';
-    messageBox.style.zIndex = '3000';
-    messageBox.style.minWidth = '300px';
-    
-    setTimeout(() => {
-        messageBox.remove();
-    }, 3000);
-}
-
-// ============================================
-// LOGOUT
-// ============================================
-
-function openLogoutModal() {
-    ModalManager.show('logoutModal');
-}
-
-function handleLogout() {
-    ModalManager.hide('logoutModal');
-    ModalManager.showLoading();
-    
-    setTimeout(() => {
-        ModalManager.hideLoading();
-        showSuccessMessage('You have been logged out successfully.');
-        // Redirect to login page
-        window.location.href = "/login/HTML_Files/login.html";
-
-    }, 1000);
-}
-
-// ============================================
-// EVENT LISTENERS SETUP
-// ============================================
-
-function setupEventListeners() {
-    // Filter buttons
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderDashboard(btn.dataset.period);
-        });
-    });
-
-    // Logout
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', openLogoutModal);
+    if (schedule.length === 0) {
+        container.innerHTML = '<p style="color: #6C757D; text-align: center; padding: 20px;">No scheduled activities for today</p>';
+        return;
     }
 
-    // Add Employee Modal
-    const cancelAddBtn = document.getElementById('cancelAddEmployee');
-    const submitAddBtn = document.getElementById('submitAddEmployee');
-    if (cancelAddBtn) cancelAddBtn.addEventListener('click', () => ModalManager.hide('addEmployeeModal'));
-    if (submitAddBtn) submitAddBtn.addEventListener('click', handleAddEmployee);
+    const fragment = document.createDocumentFragment();
+    schedule.forEach(item => {
+        const timelineItem = document.createElement('div');
+        timelineItem.className = 'timeline-item';
 
-    // Edit Employee Modal
-    const cancelEditBtn = document.getElementById('cancelEditEmployee');
-    const submitEditBtn = document.getElementById('submitEditEmployee');
-    if (cancelEditBtn) cancelEditBtn.addEventListener('click', () => ModalManager.hide('editEmployeeModal'));
-    if (submitEditBtn) submitEditBtn.addEventListener('click', handleEditEmployee);
+        timelineItem.innerHTML = `
+            <div class="timeline-dot ${item.status}"></div>
+            <div class="timeline-time">${item.time}</div>
+            <div class="timeline-title">${item.title}</div>
+            <div class="timeline-description">${item.description}</div>
+            <span class="timeline-status ${item.status}">
+                ${item.status === 'completed' ? 'Completed' : 'In Progress'}
+            </span>
+        `;
 
-    // View Employee Modal
-    const closeViewBtn = document.getElementById('closeViewEmployee');
-    const editFromViewBtn = document.getElementById('editFromView');
-    const deleteFromViewBtn = document.getElementById('deleteFromView');
-    if (closeViewBtn) closeViewBtn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
-    if (editFromViewBtn) editFromViewBtn.addEventListener('click', handleEditFromView);
-    if (deleteFromViewBtn) deleteFromViewBtn.addEventListener('click', handleDeleteFromView);
-
-    // Confirm Delete Modal
-    const cancelDeleteBtn = document.getElementById('cancelDelete');
-    const confirmDeleteBtn = document.getElementById('confirmDelete');
-    if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', () => ModalManager.hide('confirmDeleteModal'));
-    if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', handleDeleteEmployee);
-
-    // Logout Modal
-    const cancelLogoutBtn = document.getElementById('cancelLogout');
-    const confirmLogoutBtn = document.getElementById('confirmLogout');
-    if (cancelLogoutBtn) cancelLogoutBtn.addEventListener('click', () => ModalManager.hide('logoutModal'));
-    if (confirmLogoutBtn) confirmLogoutBtn.addEventListener('click', handleLogout);
-
-    // Close modals on overlay click
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-        });
+        fragment.appendChild(timelineItem);
     });
 
-    // Form submission with Enter key
-    const addForm = document.getElementById('addEmployeeForm');
-    const editForm = document.getElementById('editEmployeeForm');
-    
-    if (addForm) {
-        addForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            handleAddEmployee();
-        });
+    container.innerHTML = '';
+    container.appendChild(fragment);
+}
+
+function renderActiveProjects(projects) {
+    const container = document.getElementById('activeProjectsList');
+    if (!container) return;
+
+    const fragment = document.createDocumentFragment();
+    projects.forEach(project => {
+        const card = document.createElement('div');
+        card.className = 'project-card-mini';
+        card.innerHTML = `
+            <div class="project-card-info">
+                <h4>${project.name}</h4>
+                <p>${project.status} • ${project.hours}h today</p>
+            </div>
+        `;
+        fragment.appendChild(card);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(fragment);
+}
+
+// ============================================
+// DASHBOARD APP
+// ============================================
+
+class DashboardApp {
+    constructor() {
+        this.dataService = new DataService();
+        this.uiManager = new UIManager(this.dataService);
     }
-    
-    if (editForm) {
-        editForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            handleEditEmployee();
+
+    async init() {
+        console.log('Initializing dashboard...');
+        this.setupEventListeners();
+        await this.uiManager.loadEmployees();
+        
+        // Setup date filter and search from HTML
+        setupDateFilter();
+        setupSearchBox();
+    }
+
+    setupEventListeners() {
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.uiManager.renderDashboard(btn.dataset.period);
+            });
+        });
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to logout?')) {
+                    window.location.href = "/login/HTML_Files/login.html";
+                }
+            });
+        }
+
+        const closeViewBtn = document.getElementById('closeViewEmployee');
+        const closeModalBtn = document.getElementById('closeViewModalBtn');
+        
+        if (closeViewBtn) {
+            closeViewBtn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
+        }
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
+        }
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
         });
     }
 }
@@ -616,14 +943,12 @@ function setupEventListeners() {
 // INITIALIZATION
 // ============================================
 
-document.addEventListener('DOMContentLoaded', () => {
-    initializeData();
-    renderDashboard();
-    setupEventListeners();
+let app;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOM loaded, initializing app...');
+    app = new DashboardApp();
+    await app.init();
 });
 
-// Export functions for use in HTML onclick attributes (if needed)
-window.openAddEmployeeModal = openAddEmployeeModal;
-window.openEditEmployeeModal = openEditEmployeeModal;
 window.openViewEmployeeModal = openViewEmployeeModal;
-window.openConfirmDeleteModal = openConfirmDeleteModal;
