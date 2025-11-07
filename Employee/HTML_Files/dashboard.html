@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard</title>
+    <link rel="stylesheet" href="../CSS_Files/dashboard.css">
+    <link rel="stylesheet" href="../CSS_Files/dashboard-modals.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-user-circle"></i>
+                <span>Employee Portal</span>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-item active">
+                <i class="fas fa-line-chart"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="myprofile.html" class="nav-item">
+                <i class="fas fa-user"></i>
+                <span>My Profile</span>
+            </a>
+            <a href="assignments.html" class="nav-item">
+                <i class="fas fa-tasks"></i>
+                <span>My Assignments</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <h1 id="pageTitle">My Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?name=John+Doe&background=000&color=fff" alt="User" class="user-avatar" id="headerAvatar">
+                    <span class="user-name" id="headerName">John Doe</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Page -->
+        <div id="dashboardPage" class="page-content active">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="activeAssignments">0</h3>
+                        <p>Active Projects</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="workingHours">0h</h3>
+                        <p>Working Hours Today</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="completedTasks">0</h3>
+                        <p>Completed Tasks</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="pendingTasks">0</h3>
+                        <p>Pending Tasks</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Hours Chart -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h2>My Working Hours This Week</h2>
+                    <div class="target-info">
+                        <span>Target: 8h/day</span>
+                    </div>
+                </div>
+                <canvas id="hoursChart"></canvas>
+            </div>
+
+            <!-- Current Assignments -->
+            <div class="assignments-overview">
+                <h2>Current Assignments</h2>
+                <div class="assignments-list" id="currentAssignmentsList">
+                    <!-- Assignment cards will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="../JS_Files/dashboard.js"></script>
+</body>
+</html>

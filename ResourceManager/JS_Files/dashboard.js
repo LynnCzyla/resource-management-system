@@ -164,9 +164,7 @@ class DataService {
     // Fetch all employees and their worklogs
     async getAllEmployees(selectedDate = new Date()) {
         try {
-            console.log('Fetching employees from database...');
-
-            const { data, error } = await supabase
+            const { data: users } = await supabase
                 .from('user_details')
                 .select(`
                     employee_id,
@@ -176,91 +174,57 @@ class DataService {
                     experience_level,
                     skills,
                     user_id,
-                    users:user_id (
-                        id,
-                        name,
-                        email,
-                        role
-                    )
+                    users:user_id (id, name, email, role)
                 `);
-
-            if (error) throw error;
-            if (!data || data.length === 0) return [];
-
-            // Filter only employees & project managers
-            const filteredData = data.filter(emp => {
-                const role = emp.users?.role || '';
-                return role === 'employee';
+    
+            const employees = (users || []).filter(e => e.users?.role === 'employee');
+    
+            // ✅ Fetch all worklogs once
+            const { data: allWorklogs } = await supabase
+                .from('worklogs')
+                .select('user_id, log_date, hours, work_type, work_description, status');
+    
+            const groupedWorklogs = {};
+            (allWorklogs || []).forEach(w => {
+                if (!groupedWorklogs[w.user_id]) groupedWorklogs[w.user_id] = [];
+                groupedWorklogs[w.user_id].push(w);
             });
-
-            console.log('Filtered employees:', filteredData.length);
-
-            // Transform employees with workload & worklogs
-            const employees = await Promise.all(
-                filteredData.map(emp => this.transformEmployee(emp, selectedDate))
-            );
-
-            return employees.filter(emp => emp !== null);
+    
+            // ✅ Compute workloads in parallel locally
+            return employees.map(emp => {
+                const userId = emp.users?.id;
+                const worklogs = groupedWorklogs[userId] || [];
+                const workload = this.calculateWorkloadFromArray(worklogs, selectedDate);
+    
+                return {
+                    id: emp.employee_id,
+                    userId,
+                    name: emp.users?.name || 'Unknown',
+                    role: emp.job_title || 'No role',
+                    email: emp.users?.email || '',
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.users?.name)}&background=4A90E2&color=fff`,
+                    skills: emp.skills || [],
+                    workload,
+                    status: getWorkloadStatus(workload.today),
+                    worklogs
+                };
+            });
         } catch (err) {
             console.error('Error in getAllEmployees:', err);
             return [];
         }
     }
 
+    calculateWorkloadFromArray(worklogs, selectedDate = new Date()) {
+        const dateStr = selectedDate.toISOString().split('T')[0];
+        const todayLogs = worklogs.filter(w => new Date(w.log_date).toISOString().split('T')[0] === dateStr);
+        const todayHours = todayLogs.reduce((sum, w) => sum + parseFloat(w.hours || 0), 0);
     
-
-    // Transform single employee
-    async transformEmployee(emp, selectedDate = new Date()) {
-        // Ensure we have a valid userId
-        const userId = emp.userId || emp.users?.id;
-        if (!userId) {
-            console.warn('No user_id found for employee:', emp);
-            return null; // skip this employee
-        }
-    
-        const name = emp.name || emp.users?.name || 'Unknown';
-        console.log(`Fetching worklogs for userId: ${userId} employee: ${name}`);
-    
-        // Fetch worklogs safely
-        let worklogs = [];
-        try {
-            const { data: worklogsData, error } = await supabase
-                .from('worklogs')
-                .select('log_date, hours, work_type, work_description, status') 
-                .eq('user_id', Number(userId))
-                .order('log_date', { ascending: true });
-    
-            if (error) {
-                console.error(`Error fetching worklogs for ${name}:`, error);
-            }
-    
-            worklogs = Array.isArray(worklogsData) ? worklogsData : [];
-        } catch (err) {
-            console.error(`Unexpected error fetching worklogs for ${name}:`, err);
-        }
-    
-        // Calculate workload safely
-        const workload = await this.calculateWorkload(userId, selectedDate);
-        const status = getWorkloadStatus(workload.today);
-    
-        return {
-            id: emp.id || emp.employee_id,
-            userId: userId,
-            name: name,
-            role: emp.role || emp.job_title || 'No role',
-            email: emp.email || emp.users?.email || 'No email',
-            skills: Array.isArray(emp.skills) ? emp.skills : [],
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=4A90E2&color=fff`,
-            workload: workload,
-            worklogs: worklogs,
-            status: status,
-            userRole: emp.userRole || emp.users?.role || 'employee'
-        };
+        // same logic for week & month if needed
+        return { today: todayHours, week: [], month: [] };
     }
     
     
-    
-
     // Calculate workload from worklogs array
     // --- REPLACE DataService.calculateWorkload WITH THIS ---
 async calculateWorkload(userId, selectedDate = new Date()) {
@@ -463,11 +427,8 @@ class UIManager {
     async loadEmployees() {
         try {
             ModalManager.showLoading();
-            this.employees = await Promise.all(
-                (await this.dataService.getAllEmployees()).map(emp => 
-                    this.dataService.transformEmployee(emp, this.selectedDate)
-                )
-            );
+            this.employees = await this.dataService.getAllEmployees(this.selectedDate);
+
             this.filteredEmployees = [...this.employees];
             ModalManager.hideLoading();
             this.renderDashboard(this.currentPeriod);
@@ -901,7 +862,9 @@ class DashboardApp {
     }
 
     setupEventListeners() {
-        // Filter button logic
+        // ============================================
+        // FILTER BUTTONS
+        // ============================================
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -910,23 +873,14 @@ class DashboardApp {
             });
         });
     
-        // ✅ Simple logout confirmation
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                const confirmLogout = confirm('Are you sure you want to log out?');
-                if (confirmLogout) {
-                    // Clear any saved session data (optional)
-                    localStorage.removeItem('loggedUser');
+        // ============================================
+        // LOGOUT BUTTON (MODAL STYLE)
+        // ============================================
+        this.setupLogoutListeners();
     
-                    // Redirect to login page
-                    alert('You have been logged out successfully.');
-                    window.location.href = "/login/HTML_Files/login.html";
-                }
-            });
-        }
-    
-        // Close view modal buttons
+        // ============================================
+        // CLOSE MODAL BUTTONS
+        // ============================================
         const closeViewBtn = document.getElementById('closeViewEmployee');
         const closeModalBtn = document.getElementById('closeViewModalBtn');
     
@@ -937,7 +891,9 @@ class DashboardApp {
             closeModalBtn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
         }
     
-        // Modal overlay click handling
+        // ============================================
+        // MODAL OVERLAY CLICK
+        // ============================================
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -947,6 +903,44 @@ class DashboardApp {
             });
         });
     }
+    
+    // ============================================
+    // LOGOUT LISTENERS + HANDLER
+    // ============================================
+    setupLogoutListeners() {
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => this.openLogoutModal());
+        }
+    
+        const cancelLogoutBtn = document.getElementById('cancelLogout');
+        const confirmLogoutBtn = document.getElementById('confirmLogout');
+    
+        if (cancelLogoutBtn) {
+            cancelLogoutBtn.addEventListener('click', () => ModalManager.hide('logoutModal'));
+        }
+        if (confirmLogoutBtn) {
+            confirmLogoutBtn.addEventListener('click', () => this.handleLogout());
+        }
+    }
+    
+    // ============================================
+    // LOGOUT MODAL AND ACTION
+    // ============================================
+    openLogoutModal() {
+        ModalManager.show('logoutModal');
+    }
+    
+    handleLogout() {
+        // Clear session
+        localStorage.removeItem('loggedUser');
+        sessionStorage.clear();
+    
+    
+        // Redirect
+        window.location.href = "/login/HTML_Files/login.html";
+    }
+    
     
 }
 
