@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PM Portal</title>
+    <link rel="stylesheet" href="../CSS_Files/Dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-project-diagram"></i>
+                <span>PM Portal</span>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="../HTML_Files/Dashboard.html" class="nav-item active">
+                <i class="fas fa-line-chart"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="../HTML_Files/My Projects.html" class="nav-item">
+                <i class="fas fa-folder-open"></i>
+                <span>My Projects</span>
+            </a>
+            <a href="../HTML_Files/Resource Finder.html" class="nav-item">
+                <i class="fas fa-search"></i>
+                <span>Resource Finder</span>
+            </a>
+            <a href="../HTML_Files/Resource Requests.html" class="nav-item">
+                <i class="fas fa-paper-plane"></i>
+                <span>Resource Requests</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <h1>Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?name=Sarah+Williams&background=000&color=fff" alt="User" class="user-avatar">
+                    <span class="user-name">Sarah Williams</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="page-content">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="activeProjects">2</h3>
+                        <p>Active Projects</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="pendingRequests">2</h3>
+                        <p>Pending Requests</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="teamMembers">4</h3>
+                        <p>Team Members</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="overdueProjects">0</h3>
+                        <p>Overdue</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Overview -->
+            <div class="overview-section">
+                <h2>Active Projects Overview</h2>
+                <div class="projects-overview-grid" id="projectsOverviewGrid">
+                    <!-- Project Card 1 -->
+                    <div class="project-overview-card">
+                        <div class="project-overview-header">
+                            <h3>Customer Portal Redesign</h3>
+                            <span class="project-status active">Active</span>
+                        </div>
+                        <p class="project-meta">
+                            <i class="fas fa-calendar"></i> Due: Dec 15, 2025
+                        </p>
+                    </div>
+
+                    <!-- Project Card 2 -->
+                    <div class="project-overview-card">
+                        <div class="project-overview-header">
+                            <h3>API Integration</h3>
+                            <span class="project-status active">Active</span>
+                        </div>
+                        <p class="project-meta">
+                            <i class="fas fa-calendar"></i> Due: Nov 10, 2025
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Overview -->
+            <div class="team-section">
+                <div class="section-header">
+                    <h2>Assigned Team Members</h2>
+                    <button class="btn-secondary" id="viewAllTeamBtn">
+                        <i class="fas fa-users"></i> View All
+                    </button>
+                </div>
+                <div class="team-grid" id="teamGrid">
+                    <!-- Team Member 1 -->
+                    <div class="team-member-card">
+                        <img src="https://ui-avatars.com/api/?name=John+Doe&background=4A90E2&color=fff" alt="John Doe" class="team-member-avatar">
+                        <h4>John Doe</h4>
+                        <p>Senior Developer</p>
+                    </div>
+
+                    <!-- Team Member 2 -->
+                    <div class="team-member-card">
+                        <img src="https://ui-avatars.com/api/?name=Jane+Smith&background=7ED321&color=fff" alt="Jane Smith" class="team-member-avatar">
+                        <h4>Jane Smith</h4>
+                        <p>UI/UX Designer</p>
+                    </div>
+
+                    <!-- Team Member 3 -->
+                    <div class="team-member-card">
+                        <img src="https://ui-avatars.com/api/?name=Mike+Johnson&background=F5A623&color=fff" alt="Mike Johnson" class="team-member-avatar">
+                        <h4>Mike Johnson</h4>
+                        <p>Backend Developer</p>
+                    </div>
+
+                    <!-- Team Member 4 -->
+                    <div class="team-member-card">
+                        <img src="https://ui-avatars.com/api/?name=David+Brown&background=D0021B&color=fff" alt="David Brown" class="team-member-avatar">
+                        <h4>David Brown</h4>
+                        <p>DevOps Engineer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to logout?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <div id="messageContainer"></div>
+
+    <script type="module" src="../JS_Files/Dashboard.js"></script>
+</body>
+</html>

@@ -92,7 +92,7 @@ form.addEventListener("submit", async (e) => {
 
   setTimeout(() => {
   if (user.role === "project_manager") {
-    window.location.href = "../HTML_Files/project_dashboard.html";
+    window.location.href = "../../ProjectManager/HTML_Files/Dashboard.html";
   } else if (user.role === "resource_manager") {
     window.location.href = "/ResourceManager/HTML_Files/dashboard.html";
   } else if (user.role === "employee") {
