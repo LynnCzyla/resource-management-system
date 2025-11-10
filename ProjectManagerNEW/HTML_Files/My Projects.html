@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Projects - PM Portal</title>
+    <link rel="stylesheet" href="../CSS_Files/My Projects.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module" src="../JS_Files/My Projects.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-project-diagram"></i>
+                <span>PM Portal</span>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="../HTML_Files/Dashboard.html" class="nav-item">
+                <i class="fas fa-line-chart"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="../HTML_Files/My Projects.html" class="nav-item active">
+                <i class="fas fa-folder-open"></i>
+                <span>My Projects</span>
+            </a>
+            <a href="../HTML_Files/Resource Requests.html" class="nav-item">
+                <i class="fas fa-paper-plane"></i>
+                <span>Resource Requests</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <h1>My Projects</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?name=Sarah+Williams&background=000&color=fff" alt="User" class="user-avatar">
+                    <span class="user-name">Sarah Williams</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Projects Content -->
+        <div class="page-content">
+            <div class="page-header">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="projectSearch" placeholder="Search projects...">
+                </div>
+                <div class="header-actions">
+                    <select id="projectStatusFilter" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="planning">Planning</option>
+                        <option value="completed">Completed</option>
+                        <option value="on-hold">On Hold</option>
+                    </select>
+                    <button class="primary-btn" id="addProjectBtn">
+                        <i class="fas fa-plus"></i> New Project
+                    </button>
+                </div>
+            </div>
+
+            <div class="projects-grid" id="projectsGrid">
+                <!-- Mock Project Card 1 -->
+                <div class="project-card" data-id="1">
+                    <div class="project-card-header">
+                        <div>
+                            <h3>E-Commerce Platform</h3>
+                            <span class="project-status active">Active</span>
+                        </div>
+                    </div>
+                    <div class="project-card-meta">
+                        <span><i class="fas fa-calendar"></i> Dec 31, 2024</span>
+                        <span><i class="fas fa-users"></i> 8 members</span>
+                        
+                    </div>
+                    <p class="project-card-description">Building a modern e-commerce platform with React and Node.js</p>
+                    <div class="project-card-actions">
+                        <button class="btn-view">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <button class="btn-allocate">
+                            <i class="fas fa-clock"></i> Allocate Hours
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mock Project Card 2 -->
+                <div class="project-card" data-id="2">
+                    <div class="project-card-header">
+                        <div>
+                            <h3>Mobile App Redesign</h3>
+                            <span class="project-status planning">Planning</span>
+                        </div>
+                    </div>
+                    <div class="project-card-meta">
+                        <span><i class="fas fa-calendar"></i> Oct 15, 2024</span>
+                        <span><i class="fas fa-users"></i> 5 members</span>
+                       
+                    </div>
+                    <p class="project-card-description">Redesigning the mobile app UI/UX for better user experience</p>
+                    <div class="project-card-actions">
+                        <button class="btn-view">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <button class="btn-allocate">
+                            <i class="fas fa-clock"></i> Allocate Hours
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mock Project Card 3 -->
+                <div class="project-card" data-id="3">
+                    <div class="project-card-header">
+                        <div>
+                            <h3>Data Analytics Dashboard</h3>
+                            <span class="project-status completed">Completed</span>
+                        </div>
+                    </div>
+                    <div class="project-card-meta">
+                        <span><i class="fas fa-calendar"></i> Aug 20, 2024</span>
+                        <span><i class="fas fa-users"></i> 6 members</span>
+                       
+                    </div>
+                    <p class="project-card-description">Creating a comprehensive data analytics dashboard for business insights</p>
+                    <div class="project-card-actions">
+                        <button class="btn-view">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <button class="btn-allocate">
+                            <i class="fas fa-clock"></i> Allocate Hours
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mock Project Card 4 -->
+                <div class="project-card" data-id="4">
+                    <div class="project-card-header">
+                        <div>
+                            <h3>API Integration Project</h3>
+                            <span class="project-status active">Active</span>
+                        </div>
+                    </div>
+                    <div class="project-card-meta">
+                        <span><i class="fas fa-calendar"></i> Nov 30, 2024</span>
+                        <span><i class="fas fa-users"></i> 4 members</span>
+                       
+                    </div>
+                    <p class="project-card-description">Integrating third-party APIs for enhanced functionality</p>
+                    <div class="project-card-actions">
+                        <button class="btn-view">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <button class="btn-allocate">
+                            <i class="fas fa-clock"></i> Allocate Hours
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Allocate Hours Modal -->
+    <div class="modal-overlay" id="allocateHoursModal">
+        <div class="modal-box modal-box-large">
+            <div class="modal-header">
+                <h2>Allocate Team Hours - <span id="modalProjectName">Project Name</span></h2>
+                <button class="modal-close" id="closeAllocateModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="allocateForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="employeeSelect">Employee *</label>
+                            <select id="employeeSelect" required>
+                                <option value="">Select Team Member</option>
+                                <option value="john">John Doe - Senior Developer</option>
+                                <option value="jane">Jane Smith - UI/UX Designer</option>
+                                <option value="mike">Mike Johnson - Backend Developer</option>
+                                <option value="david">David Brown - DevOps Engineer</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Employee Availability Display -->
+                    <div class="availability-display" id="availabilityDisplay" style="display: none;">
+                        <div class="availability-header">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Employee Availability</strong>
+                        </div>
+                        <div class="availability-info">
+                            <div class="availability-item">
+                                <span class="availability-label">Status:</span>
+                                <span class="availability-badge available">
+                                    <i class="fas fa-check-circle"></i> Available
+                                </span>
+                            </div>
+                            <div class="availability-item">
+                                <span class="availability-label">Current Utilization:</span>
+                                <span class="availability-value">60% (24h/40h this week)</span>
+                            </div>
+                            <div class="availability-item">
+                                <span class="availability-label">Available Hours:</span>
+                                <span class="availability-value success">16h remaining</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="startDate">Start Date *</label>
+                            <input type="date" id="startDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="endDate">End Date *</label>
+                            <input type="date" id="endDate" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="hoursPerDay">Hours per Day *</label>
+                            <input type="number" id="hoursPerDay" min="0" max="8" step="0.5" value="8" required>
+                            <small class="form-hint">Maximum 8 hours per day</small>
+                        </div>
+                     
+                    </div>
+
+                    <div class="form-group">
+                        <label for="taskDescription">Task Description</label>
+                        <textarea id="taskDescription" rows="3" placeholder="Describe what this employee will be working on..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelAllocate">Cancel</button>
+                        <button type="submit" class="primary-btn">
+                            <i class="fas fa-save"></i> Allocate Hours
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Project Modal -->
+    <div class="modal-overlay" id="viewProjectModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="viewProjectName">Project Details</h2>
+                <button class="modal-close" id="closeViewProjectModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="project-detail-view">
+                    <div class="detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span id="viewProjectStatus" class="project-status"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Description:</span>
+                        <span id="viewProjectDescription"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Deadline:</span>
+                        <span id="viewProjectDeadline"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Team Size:</span>
+                        <span id="viewProjectTeamSize"></span>
+                    </div>
+                    <div class="detail-row">
+                       
+                        <span id="viewProjectBudget"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="closeProjectBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Modal -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to logout?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <div id="messageContainer"></div>
+
+
+</body>
+</html>
