@@ -1,306 +1,357 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resource Requests - PM Portal</title>
-    <link rel="stylesheet" href="../CSS_Files/Resource Requests.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">
-                <i class="fas fa-project-diagram"></i>
-                <span>PM Portal</span>
-            </div>
-        </div>
-        
-        <nav class="sidebar-nav">
-            <a href="../HTML_Files/Dashboard.html" class="nav-item">
-                <i class="fas fa-line-chart"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="../HTML_Files/My Projects.html" class="nav-item">
-                <i class="fas fa-folder-open"></i>
-                <span>My Projects</span>
-            </a>
-            <a href="../HTML_Files/Resource Finder.html" class="nav-item">
-                <i class="fas fa-search"></i>
-                <span>Resource Finder</span>
-            </a>
-            <a href="../HTML_Files/Resource Requests.html" class="nav-item active">
-                <i class="fas fa-paper-plane"></i>
-                <span>Resource Requests</span>
-            </a>
-        </nav>
-        
-        <div class="sidebar-footer">
-            <button class="logout-btn" id="logoutBtn">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </button>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Header -->
-        <header class="top-header">
-            <div class="header-left">
-                <h1>Resource Requests</h1>
-            </div>
-            <div class="header-right">
-                <div class="user-info">
-                    <img src="https://ui-avatars.com/api/?name=Sarah+Williams&background=000&color=fff" alt="User" class="user-avatar">
-                    <span class="user-name">Sarah Williams</span>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Management Resource Requests</title>
+        <link rel="stylesheet" href="../CSS_Files/Resource Requests.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
+    <body>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>PM Portal</span>
                 </div>
             </div>
-        </header>
+            
+            <nav class="sidebar-nav">
+                <a href="../HTML_Files/Dashboard.html" class="nav-item">
+                    <i class="fas fa-line-chart"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="../HTML_Files/My Projects.html" class="nav-item">
+                    <i class="fas fa-folder-open"></i>
+                    <span>My Projects</span>
+                </a>
+                <a href="../HTML_Files/Resource Requests.html" class="nav-item active">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Resource Requests</span>
+                </a>
+                <a href="../HTML_Files/projecttrack.html" class="nav-item">
+                    <i class="fas fa-tasks"></i>
+                    <span>Project Tracking</span>
+                </a>
+            </nav>
 
-        <!-- Page Content -->
-        <div class="page-content">
-            <div class="page-header">
-                <h2>Resource Requests</h2>
-                <button class="primary-btn" id="newRequestBtn">
-                    <i class="fas fa-plus"></i> New Request
+            
+            <div class="sidebar-footer">
+                <button class="logout-btn" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h1>Resource Requests</h1>
+                </div>
+                    <div class="user-info">
+                        <img src="https://ui-avatars.com/api/?name=Project+Manager&background=000&color=fff" alt="User" class="user-avatar">
+                        <span class="user-name" id="userName">Project Manager</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                <div class="page-header">
+                    <h2>My Resource Requests</h2>
+                    <p style="color: #6c757d; font-size: 14px;">Track and manage your resource requests</p>
+
+                    <div class="header-right">
+                    <button class="primary-btn" id="newRequestBtn">
+                        <i class="fas fa-plus"></i> New Request
+                    </button>
+                    </div>
+                </div>
+
+                <!-- Requests Container -->
+                <div class="requests-container">
+                    <div class="requests-filter">
+                        <select id="requestStatusFilter" class="filter-select">
+                            <option value="">All Requests</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="requests-list" id="requestsList">
+                        <!-- Dynamic content will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Request Card Template -->
+        <template id="requestCardTemplate">
+            <div class="request-card-header">
+                <div class="request-info-left">
+                    <h3 class="request-project-name"></h3>
+                    <div class="request-meta">
+                        <span><i class="fas fa-briefcase"></i> <span class="meta-project"></span></span>
+                        <span><i class="fas fa-calendar"></i> Submitted <span class="meta-date"></span></span>
+                        <span><i class="fas fa-users"></i> <span class="meta-resources"></span></span>
+                    </div>
+                </div>
+                <span class="request-status"></span>
+            </div>
+
+            <div class="request-details-grid">
+                <div class="detail-column">
+                    <span class="detail-label">Skills</span>
+                    <div class="skills-tags"></div>
+                </div>
+
+                <div class="detail-column">
+                    <span class="detail-label">Timeline</span>
+                    <span class="detail-value timeline-value"></span>
+                </div>
+
+                <div class="detail-column">
+                    <span class="detail-label">Duration</span>
+                    <span class="detail-value duration-value"></span>
+                </div>
+
+                <div class="detail-column">
+                    <span class="detail-label">Start Date</span>
+                    <span class="detail-value start-date-value"></span>
+                </div>
+
+                <div class="detail-column">
+                    <span class="detail-label">End Date</span>
+                    <span class="detail-value end-date-value"></span>
+                </div>
+            </div>
+
+            <div class="request-actions">
+                <button class="btn-view">
+                    <i class="fas fa-eye"></i> View Details
+                </button>
+            </div>
+        </template>
+
+        <!-- Resource Row Template -->
+        <template id="resourceRowTemplate">
+            <div class="resource-row-header">
+                <h3 class="resource-row-title">Resource #1</h3>
+                <button type="button" class="btn-remove-resource" style="display: none;">
+                    <i class="fas fa-times"></i> Remove
                 </button>
             </div>
 
-            <!-- Requests Container -->
-            <div class="requests-container">
-                <div class="requests-filter">
-                    <select id="requestStatusFilter" class="filter-select">
-                        <option value="">All Requests</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="positionInput">Position/Role *</label>
+                    <input type="text" id="positionInput" 
+                        class="resource-position" 
+                        placeholder="e.g., Frontend Developer" required>
+                </div>
+                <div class="form-group">
+                    <label for="quantityInput">Quantity Needed *</label>
+                    <input type="number" id="quantityInput" 
+                        class="resource-quantity" 
+                        min="1" value="1" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="skillLevelSelect">Experience Level *</label>
+                    <select id="skillLevelSelect" class="resource-skill-level" required>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate" selected>Intermediate</option>
+                        <option value="advanced">Advanced</option>
                     </select>
                 </div>
-                <div class="requests-list" id="requestsList">
-                    <!-- Requests will be dynamically loaded here -->
+                <div class="form-group">
+                    <label for="assignmentTypeSelect">Assignment Type *</label>
+                    <select id="assignmentTypeSelect" class="resource-assignment-type" required>
+                        <option value="Full-Time">Full-Time (40 hours/week)</option>
+                        <option value="Part-Time">Part-Time (20 hours/week)</option>
+                        <option value="Contract">Contract (15 hours/week)</option>
+                        <option value="Consultant">Consultant (5 hours/week)</option>
+                    </select>
                 </div>
             </div>
-        </div>
-    </main>
 
-    <!-- New Request Modal -->
-    <div class="modal-overlay" id="newRequestModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h2>Submit Resource Request</h2>
-                <button class="close-btn" id="closeRequestModal">
-                    <i class="fas fa-times"></i>
-                </button>
+            <div class="form-group">
+                <label for="skillsInput">Required Skills *</label>
+                <input type="text" id="skillsInput" 
+                    class="resource-skills"
+                    placeholder="e.g., React, TypeScript, CSS (comma separated)" required>
             </div>
-            <div class="modal-body">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="startDateInput">Start Date *</label>
+                    <input type="date" id="startDateInput" 
+                        class="resource-start-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="endDateInput">End Date *</label>
+                    <input type="date" id="endDateInput" 
+                        class="resource-end-date" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="justificationInput">Justification / Requirements</label>
+                <textarea id="justificationInput" 
+                        class="resource-justification"
+                        rows="3" 
+                        placeholder="Why do you need this resource? Provide details about the work they will be doing..."></textarea>
+            </div>
+        </template>
+
+        <!-- New Request Modal -->
+        <div class="modal-overlay" id="newRequestModal">
+            <div class="modal-box modal-box-large">
+                <div class="modal-header">
+                    <h2>New Resource Request</h2>
+                    <button class="close-btn" id="closeRequestModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
                 <form id="requestForm">
-                    <div class="form-row">
+                    <div class="modal-body">
                         <div class="form-group">
                             <label for="projectSelect">Project *</label>
                             <select id="projectSelect" required>
                                 <option value="">Select a project</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label for="positionInput">Position/Role *</label>
-                            <input type="text" id="positionInput" placeholder="e.g., Frontend Developer" required>
-                        </div>
-                    </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="quantityInput">Number of Resources *</label>
-                            <input type="number" id="quantityInput" min="1" value="1" required>
+                        <h4 style="margin: 24px 0 16px 0;">Resource Requirements</h4>
+                        <div class="resource-rows-container" id="resourceRowsContainer">
+                            <!-- Resource rows will be added here dynamically -->
                         </div>
-                        <div class="form-group">
-                            <label for="prioritySelect">Priority *</label>
-                            <select id="prioritySelect" required>
-                                <option value="low">Low</option>
-                                <option value="medium" selected>Medium</option>
-                                <option value="high">High</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <div class="form-group">
-                        <label for="skillsInput">Required Skills *</label>
-                        <input type="text" id="skillsInput" placeholder="e.g., React, TypeScript, CSS (comma separated)" required>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="experienceSelect">Experience Level *</label>
-                            <select id="experienceSelect" required>
-                                <option value="junior">Junior (1-3 years)</option>
-                                <option value="mid" selected>Mid-level (3-5 years)</option>
-                                <option value="senior">Senior (5+ years)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="durationInput">Duration *</label>
-                            <input type="text" id="durationInput" placeholder="e.g., 3 months" required>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="startDateInput">Start Date *</label>
-                            <input type="date" id="startDateInput" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="endDateInput">End Date</label>
-                            <input type="date" id="endDateInput">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="descriptionInput">Additional Details</label>
-                        <textarea id="descriptionInput" rows="4" placeholder="Provide any additional information about the resource requirements..."></textarea>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" id="cancelFormBtn">Cancel</button>
-                        <button type="submit" class="primary-btn">
-                            <i class="fas fa-paper-plane"></i> Submit Request
+                        <button type="button" class="btn-add-resource" id="addResourceBtn">
+                            <i class="fas fa-plus"></i> Add Another Resource
                         </button>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" id="cancelFormBtn">Cancel</button>
+                        <button type="submit" class="primary-btn">Submit Request</button>
                     </div>
                 </form>
             </div>
         </div>
-    </div>
 
-    <!-- Request Detail Modal -->
-    <div class="modal-overlay" id="requestDetailModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h2>Request Details</h2>
-                <button class="close-btn" id="closeDetailModal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body" id="requestDetailBody">
-                <!-- Details will be populated by JS -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" id="closeDetailBtn">Close</button>
+        <!-- Request Detail Modal -->
+        <div class="modal-overlay" id="requestDetailModal">
+            <div class="modal-box modal-box-large">
+                <div class="modal-header">
+                    <h2>Request Details</h2>
+                    <button class="close-btn" id="closeDetailModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="requestDetailContent">
+                    <div class="detail-section">
+                        <h4>Project Information</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Project Name:</span>
+                            <span class="detail-value" id="detailProjectName"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Description:</span>
+                            <span class="detail-value" id="detailProjectDesc"></span>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h4>Request Timeline</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value"><span class="request-status" id="detailStatus"></span></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Submitted:</span>
+                            <span class="detail-value" id="detailSubmitted"></span>
+                        </div>
+                        <div class="detail-row" id="detailApprovedRow" style="display: none;">
+                            <span class="detail-label">Processed:</span>
+                            <span class="detail-value" id="detailApproved"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Start Date:</span>
+                            <span class="detail-value" id="detailStartDate"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">End Date:</span>
+                            <span class="detail-value" id="detailEndDate"></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Duration:</span>
+                            <span class="detail-value" id="detailDuration"></span>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h4>Resource Requirements</h4>
+                        <div class="requirements-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Quantity</th>
+                                        <th>Experience Level</th>
+                                        <th>Type</th>
+                                        <th>Required Skills</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="requirementsTableBody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h4>Additional Notes</h4>
+                        <p id="detailNotes"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="closeDetailBtn">Close</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Cancel Request Modal -->
-    <div class="modal-overlay" id="cancelRequestModal">
-        <div class="modal-box modal-box-small">
-            <div class="modal-header">
-                <h2>Cancel Request</h2>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to cancel this resource request?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" id="cancelCancelRequest">No, Keep It</button>
-                <button type="button" class="btn-danger" id="confirmCancelRequest">Yes, Cancel Request</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Logout Modal -->
-    <div class="modal-overlay" id="logoutModal">
-        <div class="modal-box modal-box-small">
-            <div class="modal-header">
-                <h2>Confirm Logout</h2>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to logout?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
-                <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+        <!-- Logout Modal -->
+        <div class="modal-overlay" id="logoutModal">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <h2>Confirm Logout</h2>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to logout?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
+                    <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Loading Overlay -->
-    <div class="modal-overlay" id="loadingOverlay">
-        <div class="loading-spinner">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>Loading...</p>
+        <!-- Loading Overlay -->
+        <div class="modal-overlay" id="loadingOverlay">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading...</p>
+            </div>
         </div>
-    </div>
 
-    <!-- Message Container -->
-    <div id="messageContainer"></div>
+        <!-- Message Container -->
+        <div id="messageContainer"></div>
 
-    <script>
-        // Mock Data Functions
-        function getMockRequests() {
-            return [
-                {
-                    id: 'REQ001',
-                    project: 'Customer Portal Redesign',
-                    position: 'Frontend Developer',
-                    quantity: 2,
-                    skills: ['React', 'TypeScript', 'CSS'],
-                    experience: 'Mid-level (3-5 years)',
-                    priority: 'high',
-                    startDate: '2025-11-15',
-                    duration: '6 months',
-                    status: 'pending',
-                    submittedDate: '2025-10-20',
-                    description: 'Need experienced frontend developers for portal redesign'
-                },
-                {
-                    id: 'REQ002',
-                    project: 'Mobile App Development',
-                    position: 'Mobile Developer',
-                    quantity: 1,
-                    skills: ['React Native', 'Swift', 'Kotlin'],
-                    experience: 'Senior (5+ years)',
-                    priority: 'medium',
-                    startDate: '2025-12-01',
-                    duration: '8 months',
-                    status: 'approved',
-                    submittedDate: '2025-10-18',
-                    description: 'Senior mobile developer for cross-platform app'
-                },
-                {
-                    id: 'REQ003',
-                    project: 'API Integration',
-                    position: 'Backend Developer',
-                    quantity: 1,
-                    skills: ['Node.js', 'REST API', 'PostgreSQL'],
-                    experience: 'Mid-level (3-5 years)',
-                    priority: 'high',
-                    startDate: '2025-11-05',
-                    duration: '3 months',
-                    status: 'pending',
-                    submittedDate: '2025-10-25',
-                    description: 'Backend developer for API integration project'
-                }
-            ];
-        }
-
-        function getMockProjects() {
-            return [
-                {
-                    id: 'PROJ001',
-                    name: 'Customer Portal Redesign',
-                    status: 'active'
-                },
-                {
-                    id: 'PROJ002',
-                    name: 'Mobile App Development',
-                    status: 'planning'
-                },
-                {
-                    id: 'PROJ003',
-                    name: 'API Integration',
-                    status: 'active'
-                }
-            ];
-        }
-    </script>
-    <script type="module" src="../JS_Files/Resource Requests.js"></script>
-</body>
-</html>
+        <script type="module" src="../JS_Files/ResourceRequests.js"></script>
+    </body>
+    </html>

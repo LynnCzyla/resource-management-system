@@ -1,6 +1,4 @@
-/* Import base styles from Dashboard.css - for shared styles */
-/* In production, you might want to create a shared.css file */
-
+/* Reset and Base Styles */
 * {
     margin: 0;
     padding: 0;
@@ -352,64 +350,35 @@ body {
     font-size: 14px;
     font-weight: 500;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .btn-view:hover {
     background-color: var(--bg-light);
 }
 
-.btn-edit {
+.btn-allocate {
     flex: 1;
     padding: 10px;
-    background-color: var(--bg-gray);
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
-.btn-edit:hover {
-    background-color: var(--border-color);
-}
-
-/* Empty State */
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text-secondary);
-    grid-column: 1/-1;
-}
-
-.empty-state i {
-    font-size: 64px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-}
-
-.empty-state h3 {
-    font-size: 20px;
-    margin-bottom: 8px;
-}
-
-.empty-state p {
-    font-size: 14px;
-}
-
-/* Progress Bar */
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background-color: var(--bg-gray);
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background-color: var(--accent-blue);
-    transition: width 0.3s ease;
+.btn-allocate:hover {
+    background-color: #333333;
 }
 
 /* Modals */
@@ -436,10 +405,16 @@ body {
     width: 90%;
     max-width: 600px;
     box-shadow: var(--shadow-lg);
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .modal-box-small {
     max-width: 400px;
+}
+
+.modal-box-large {
+    max-width: 700px;
 }
 
 .modal-header {
@@ -511,6 +486,195 @@ body {
     gap: 12px;
 }
 
+/* Availability Display */
+.availability-display {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid var(--accent-blue);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+}
+
+.availability-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(74, 144, 226, 0.2);
+    color: var(--accent-blue);
+    font-weight: 600;
+}
+
+.availability-header i {
+    font-size: 18px;
+}
+
+.availability-info {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.availability-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.availability-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    min-width: 100px;
+    font-weight: 500;
+}
+
+.availability-value {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.availability-value.success {
+    color: var(--accent-green);
+}
+
+.availability-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.availability-badge.available {
+    background: linear-gradient(135deg, #7ED321 0%, #6BC91D 100%);
+    color: white;
+}
+
+.availability-badge.busy {
+    background: linear-gradient(135deg, #D0021B 0%, #B00018 100%);
+    color: white;
+}
+
+/* Assignment Info Section */
+.assignment-info, .utilization-info, .skills-info {
+    background-color: white;
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 12px;
+    border-left: 4px solid var(--accent-blue);
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.info-item:last-child {
+    margin-bottom: 0;
+}
+
+.info-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.info-value strong {
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+/* Skills Display */
+.skills-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.skill-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, var(--accent-blue) 0%, #3A7BC8 100%);
+    color: white;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Form Styles */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 2px solid var(--bg-light);
+}
+
+/* Buttons */
 .btn-secondary {
     padding: 10px 20px;
     background-color: var(--bg-gray);
@@ -542,6 +706,7 @@ body {
     background-color: #B00018;
 }
 
+/* Loading Spinner */
 .loading-spinner {
     text-align: center;
     color: var(--secondary-color);
@@ -664,5 +829,9 @@ body {
     
     .search-bar {
         max-width: 100%;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
     }
 }

@@ -780,3 +780,140 @@ td strong {
         padding: 20px;
     }
 }
+
+
+
+
+
+/* ============================================
+   ADDITIONAL STYLES FOR RECOMMENDATIONS
+   ============================================ */
+/* Assignment Info Container */
+.assignment-info {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+/* Assignment Badges */
+.hours-badge,
+.type-badge,
+.allocation-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Hours Badge */
+.hours-badge {
+    background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+    color: #1565C0;
+    border: 1px solid #90CAF9;
+}
+
+.hours-badge::before {
+    content: "⏱";
+    font-size: 12px;
+}
+
+/* Type Badge */
+.type-badge {
+    background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%);
+    color: #6A1B9A;
+    border: 1px solid #CE93D8;
+}
+
+.type-badge::before {
+    content: "📋";
+    font-size: 12px;
+}
+
+/* Allocation Badge */
+.allocation-badge {
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+    color: #1B5E20;
+    border: 1px solid #81C784;
+}
+
+.allocation-badge::before {
+    content: "📊";
+    font-size: 12px;
+}
+
+/* Recommended Employee Card Highlight */
+.recommendation-card.recommended {
+    border: 2px solid #4A90E2;
+    background: linear-gradient(135deg, #F0F7FF 0%, #FFFFFF 100%);
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.15);
+}
+.recommendation-card.recommended:hover {
+    border-color: #357ABD;
+    box-shadow: 0 6px 16px rgba(53, 122, 189, 0.2);
+}
+
+/* Already Assigned Card */
+.recommendation-card.assigned {
+    border: 2px solid #2E7D32;
+    background: linear-gradient(135deg, #F1F8F4 0%, #FFFFFF 100%);
+    opacity: 0.9;
+}
+
+.recommendation-card.assigned::after {
+    content: "✓ Assigned";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #2E7D32;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* Busy Employee Card */
+.recommendation-card.busy {
+    opacity: 0.6;
+    pointer-events: none;
+    filter: grayscale(30%);
+}
+
+.recommendation-card.busy::after {
+    content: "⊘ Busy";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #B71C1C;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* Ensure proper positioning for badges */
+.recommendation-card {
+    position: relative;
+    padding-top: 12px; /* Make room for the badge */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .assignment-info {
+        gap: 6px;
+    }
+    
+    .hours-badge,
+    .type-badge,
+    .allocation-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+    }
+}

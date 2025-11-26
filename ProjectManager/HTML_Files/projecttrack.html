@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Management Project Tracking</title>
+    <link rel="stylesheet" href="../CSS_Files/projecttrack.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-project-diagram"></i>
+                <span>PM Portal</span>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="../HTML_Files/Dashboard.html" class="nav-item">
+                <i class="fas fa-line-chart"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="../HTML_Files/My Projects.html" class="nav-item">
+                <i class="fas fa-folder-open"></i>
+                <span>My Projects</span>
+            </a>
+            <a href="../HTML_Files/Resource Requests.html" class="nav-item">
+                <i class="fas fa-paper-plane"></i>
+                <span>Resource Requests</span>
+            </a>
+            <a href="../HTML_Files/projecttrack.html" class="nav-item active">
+                <i class="fas fa-tasks"></i>
+                <span>Project Tracking</span>
+            </a>
+        </nav>
+
+<div class="sidebar-footer">
+    <button class="logout-btn" id="logoutBtn">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <h1>Project Tracking</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?name=Sarah+Williams&background=000&color=fff" alt="User" class="user-avatar">
+                        <span class="user-name" id="userName">Project Manager</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="page-content">
+            <!-- Stats Cards -->
+            <div class="stats-cards">
+            </div>
+
+            <!-- Active Projects Section -->
+            <div class="projects-section">
+                <div class="section-header">
+                    <h2>Active Projects</h2>
+                </div>
+                <div id="activeProjectsList" class="projects-list">
+                    <!-- Projects will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Project History Toggle Button -->
+            <button class="history-toggle-btn" id="historyToggleBtn">
+                <span>Project History</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+
+            <!-- Project History Section (Hidden by default) -->
+            <div class="projects-section history-section" id="projectHistorySection" style="display: none;">
+                <div class="section-header">
+                    <h2>Project History</h2>
+                    <p class="section-subtitle">Completed and dropped projects</p>
+                </div>
+                <div id="projectHistoryList" class="projects-list">
+                    <!-- History will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Remove Employee Confirmation Modal -->
+    <div class="modal-overlay" id="removeEmployeeModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Remove Team Member</h2>
+                <button class="modal-close" id="closeRemoveModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove <strong id="removeEmployeeName"></strong> from <strong id="removeProjectName"></strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelRemove">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmRemove">Yes, Remove</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complete Project Modal -->
+    <div class="modal-overlay" id="completeProjectModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Complete Project</h2>
+                <button class="modal-close" id="closeCompleteModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to mark <strong id="completeProjectName"></strong> as completed?</p>
+                <p class="modal-note">This will move the project to history.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelComplete">Cancel</button>
+                <button type="button" class="btn-success" id="confirmComplete">
+                    <i class="fas fa-check-circle"></i> Complete Project
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drop Project Modal -->
+    <div class="modal-overlay" id="dropProjectModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Drop Project</h2>
+                <button class="modal-close" id="closeDropModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to drop <strong id="dropProjectName"></strong>?</p>
+                <p class="modal-warning">This action cannot be undone. The project will be moved to history.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelDrop">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmDrop">
+                    <i class="fas fa-times-circle"></i> Drop Project
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Modal -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to logout?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="modal-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Message Container -->
+    <div id="messageContainer"></div>
+
+    <script type="module" src="../JS_Files/projecttrack.js"></script>
+</body>
+</html>

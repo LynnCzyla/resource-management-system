@@ -1,5 +1,68 @@
+// RESOURCE MANAGEMENT (RM) employee.js - Updated with Profile Pictures
 import { supabase } from "../../supabaseClient.js";
 
+async function updateUserNameDisplayEnhanced() {
+    const userNameElement = document.getElementById('userName');
+    const userAvatarElement = document.querySelector('.user-avatar');
+    
+    if (!userNameElement) {
+        console.warn('[USER DISPLAY] userName element not found');
+        return;
+    }
+
+    try {
+        const loggedUser = JSON.parse(localStorage.getItem('loggedUser') || '{}');
+        let displayName = '';
+        
+        if (loggedUser.name) {
+            displayName = loggedUser.name;
+            userNameElement.textContent = displayName;
+            console.log('[USER DISPLAY] User name updated to:', displayName);
+        } else if (loggedUser.email) {
+            try {
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('name')
+                    .eq('email', loggedUser.email)
+                    .single();
+                
+                if (!error && userData && userData.name) {
+                    displayName = userData.name;
+                    userNameElement.textContent = displayName;
+                    loggedUser.name = userData.name;
+                    localStorage.setItem('loggedUser', JSON.stringify(loggedUser));
+                    console.log('[USER DISPLAY] User name fetched from Supabase:', displayName);
+                } else {
+                    displayName = loggedUser.email.split('@')[0];
+                    userNameElement.textContent = displayName;
+                }
+            } catch (dbError) {
+                console.error('[USER DISPLAY] Error fetching from Supabase:', dbError);
+                displayName = loggedUser.email.split('@')[0];
+                userNameElement.textContent = displayName;
+            }
+        } else {
+            displayName = 'Project Manager';
+            userNameElement.textContent = displayName;
+            console.warn('[USER DISPLAY] No user information found');
+        }
+        
+        // Update avatar with user initials
+        if (userAvatarElement && displayName) {
+            const initials = displayName.split(' ')
+                .map(word => word.charAt(0).toUpperCase())
+                .join('')
+                .substring(0, 2);
+            
+            userAvatarElement.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=000&color=fff`;
+            userAvatarElement.alt = initials;
+            console.log('[USER DISPLAY] Avatar updated with initials:', initials);
+        }
+    } catch (error) {
+        console.error('[USER DISPLAY] Error updating user name:', error);
+        userNameElement.textContent = 'Project Manager';
+    }
+}
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
@@ -120,14 +183,14 @@ class MessageManager {
 }
 
 // ============================================
-// DATA SERVICE
+// DATA SERVICE - WITH PROFILE PICTURES
 // ============================================
 
 class DataService {
     static EXPERIENCE_LEVEL_MAP = {
-        'beginner': 'Junior',
-        'intermediate': 'Mid-level',
-        'advanced': 'Senior'
+        'beginner': 'Beginner',
+        'intermediate': 'Intermediate',
+        'advanced': 'Advanced'
     };
 
     static AVAILABILITY_MAP = {
@@ -156,11 +219,10 @@ class DataService {
                     project_requirements (quantity_needed),
                     resource_requests (status)
                 `)
-                .eq('resource_requests.status', 'approved'); // Only approved requests
+                .eq('resource_requests.status', 'approved');
     
             if (error) throw error;
     
-            // Filter out projects with no approved resource requests
             const approvedProjects = data.filter(proj =>
                 (proj.resource_requests || []).some(req => req.status === 'approved')
             );
@@ -171,7 +233,6 @@ class DataService {
             throw new Error('Failed to load projects. Please try again.');
         }
     }
-    
 
     async getProjectById(id) {
         try {
@@ -199,7 +260,10 @@ class DataService {
 
     async getAllEmployees() {
         try {
-            const { data, error } = await supabase
+            console.log('[DATA SERVICE] Fetching all employees with profile pictures...');
+            
+            // Get user details with profile pictures
+            const { data: userDetails, error: detailsError } = await supabase
                 .from('user_details')
                 .select(`
                     employee_id,
@@ -209,18 +273,42 @@ class DataService {
                     experience_level,
                     skills,
                     user_id,
+                    total_available_hours,
+                    profile_pic,
                     users:user_id (id, name, email, role)
                 `);
 
-            if (error) throw error;
+            if (detailsError) throw detailsError;
 
-            // Filter out resource managers - keep only employees and project managers
-            const filteredEmployees = data.filter(emp => {
+            console.log('[DATA SERVICE] User details fetched:', userDetails?.length || 0);
+
+            // Filter out resource managers
+            const filteredEmployees = userDetails.filter(emp => {
                 const role = emp.users?.role || '';
                 return role !== 'resource_manager';
             });
 
-            return filteredEmployees.map(emp => this.transformEmployee(emp));
+            // Get all project assignments to calculate assigned hours
+            const { data: assignments, error: assignError } = await supabase
+                .from('project_assignments')
+                .select('user_id, assigned_hours')
+                .eq('status', 'assigned');
+
+            if (assignError) throw assignError;
+
+            // Calculate total assigned hours per user
+            const userAssignedHours = {};
+            assignments?.forEach(assignment => {
+                if (!userAssignedHours[assignment.user_id]) {
+                    userAssignedHours[assignment.user_id] = 0;
+                }
+                userAssignedHours[assignment.user_id] += parseInt(assignment.assigned_hours || 0);
+            });
+
+            const employees = filteredEmployees.map(emp => this.transformEmployee(emp, userAssignedHours[emp.user_id] || 0));
+            
+            console.log('[DATA SERVICE] Employees transformed:', employees.length);
+            return employees;
         } catch (error) {
             console.error('Error fetching employees:', error);
             throw new Error('Failed to load employees. Please try again.');
@@ -239,17 +327,38 @@ class DataService {
                     experience_level,
                     skills,
                     user_id,
-                    users:user_id (id, name, email)
+                    total_available_hours,
+                    profile_pic,
+                    users:user_id (id, name, email, role)
                 `)
                 .eq('employee_id', id)
                 .single();
 
             if (error) throw error;
 
-            // Get assigned projects
+            const userRole = data.users?.role || 'employee';
+            let projectNames = [];
+            let totalAssignedHours = 0;
+
+            // For Project Managers: Get projects they created
+            if (userRole === 'project_manager') {
+                const { data: createdProjects, error: projectError } = await supabase
+                    .from('projects')
+                    .select('name')
+                    .eq('created_by', data.user_id)
+                    .in('status', ['pending', 'ongoing']);
+
+                if (projectError) {
+                    console.warn('Error fetching created projects:', projectError);
+                }
+
+                projectNames = createdProjects?.map(p => p.name) || [];
+            }
+
+            // Get assigned hours and projects from project_assignments
             const { data: assignments, error: assignError } = await supabase
                 .from('project_assignments')
-                .select('project:projects (name)')
+                .select('assigned_hours, project:projects (name)')
                 .eq('user_id', data.user_id)
                 .eq('status', 'assigned');
 
@@ -257,12 +366,14 @@ class DataService {
                 console.warn('Error fetching assignments:', assignError);
             }
 
-            const projectNames = assignments
-                ? assignments.map(a => a.project?.name).filter(Boolean)
-                : [];
+            totalAssignedHours = assignments?.reduce((sum, a) => sum + parseInt(a.assigned_hours || 0), 0) || 0;
+            
+            // Add assigned projects to project names
+            const assignedProjectNames = assignments?.map(a => a.project?.name).filter(Boolean) || [];
+            projectNames = [...new Set([...projectNames, ...assignedProjectNames])];
 
             return {
-                ...this.transformEmployee(data),
+                ...this.transformEmployee(data, totalAssignedHours),
                 projects: projectNames
             };
         } catch (error) {
@@ -290,7 +401,6 @@ class DataService {
         }
     }
 
-    // Helper methods
     transformProject(proj) {
         const teamSize = (proj.project_requirements || []).reduce(
             (sum, r) => sum + (r.quantity_needed || 0),
@@ -310,8 +420,43 @@ class DataService {
         };
     }
 
-    transformEmployee(emp) {
+    transformEmployee(emp, assignedHours = 0) {
         const userName = emp.users?.name || 'Unnamed';
+        const totalAvailableHours = emp.total_available_hours || 40;
+        
+        // Check if profile picture exists
+        const profilePic = emp.profile_pic;
+        const hasValidProfilePic = profilePic && 
+                                  profilePic.trim() !== '' && 
+                                  profilePic !== 'null' && 
+                                  profilePic !== 'undefined';
+        
+        // Use profile picture from database or fallback to UI Avatars
+        const avatar = hasValidProfilePic
+            ? profilePic
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=random&color=fff`;
+        
+        console.log(`[DATA SERVICE] Employee: ${userName}, Has Profile Pic: ${hasValidProfilePic}, Avatar: ${avatar}`);
+        
+        // Always use 40 hours as the base for calculation
+        const baseHours = 40;
+        let availableHours = 0;
+        let availability = 'full';
+        
+        if (totalAvailableHours === 0) {
+            availableHours = 0;
+            availability = 'full';
+        } else {
+            availableHours = Math.max(0, baseHours - assignedHours);
+    
+            if (assignedHours >= 40) {
+                availability = 'full';
+            } else if (assignedHours >= 21) {
+                availability = 'partial';
+            } else {
+                availability = 'available';
+            }
+        }
         
         return {
             id: emp.employee_id,
@@ -320,11 +465,14 @@ class DataService {
             role: emp.job_title || 'No role specified',
             department: emp.department || 'N/A',
             skills: emp.skills || [],
-            availability: this.mapStatusToAvailability(emp.status),
-            workloadHours: this.getWorkloadFromStatus(emp.status),
+            availability: availability,
+            workloadHours: assignedHours,
+            assignedHours: assignedHours,
+            totalAvailableHours: baseHours,
+            availableHours: availableHours,
             projects: [],
             experience: this.formatExperienceLevel(emp.experience_level),
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=random&color=fff`
+            avatar: avatar // ✅ Real profile picture or fallback
         };
     }
 
@@ -332,40 +480,6 @@ class DataService {
         return typeof id === 'string' && id.startsWith(prefix)
             ? parseInt(id.replace(prefix, ''))
             : id;
-    }
-
-    mapStatusToAvailability(status) {
-        if (!status) return 'available';
-        const statusLower = status.toLowerCase();
-
-        if (statusLower.includes('available') && !statusLower.includes('partial')) {
-            return 'available';
-        } else if (statusLower.includes('partial')) {
-            return 'partial';
-        } else if (statusLower.includes('busy')) {
-            return 'full';
-        } else if (statusLower.includes('overload')) {
-            return 'over';
-        }
-
-        return 'available';
-    }
-
-    getWorkloadFromStatus(status) {
-        if (!status) return 0;
-        const statusLower = status.toLowerCase();
-
-        if (statusLower.includes('available') && !statusLower.includes('partial')) {
-            return 2;
-        } else if (statusLower.includes('partial')) {
-            return 5;
-        } else if (statusLower.includes('busy')) {
-            return 8;
-        } else if (statusLower.includes('overload')) {
-            return 10;
-        }
-
-        return 0;
     }
 
     formatExperienceLevel(level) {
@@ -425,6 +539,7 @@ class UIManager {
         card.dataset.empId = emp.id;
 
         card.appendChild(this.createEmployeeHeader(emp));
+        card.appendChild(this.createAvailabilitySection(emp));
         card.appendChild(this.createEmployeeSkills(emp));
         card.appendChild(this.createEmployeeActions(emp));
 
@@ -439,6 +554,12 @@ class UIManager {
         avatar.src = emp.avatar;
         avatar.alt = `${emp.name}'s avatar`;
         avatar.className = 'employee-avatar';
+        avatar.style.objectFit = 'cover'; // Ensure proper image display
+        
+        // Add error handler for broken images
+        avatar.onerror = function() {
+            this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random&color=fff`;
+        };
 
         const info = document.createElement('div');
         info.className = 'employee-info';
@@ -462,6 +583,92 @@ class UIManager {
         header.appendChild(info);
 
         return header;
+    }
+
+    createAvailabilitySection(emp) {
+        const section = document.createElement('div');
+        section.className = 'availability-section';
+        section.style.cssText = `
+            padding: 12px 16px;
+            background: #F8F9FA;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        `;
+
+        const title = document.createElement('div');
+        title.style.cssText = `
+            font-size: 11px;
+            font-weight: 600;
+            color: #6C757D;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        `;
+        title.textContent = 'Availability';
+
+        const hoursDisplay = document.createElement('div');
+        hoursDisplay.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        `;
+
+        const availableHours = document.createElement('div');
+        availableHours.style.cssText = `
+            font-size: 24px;
+            font-weight: 700;
+            color: ${this.getAvailabilityColor(emp.availability)};
+        `;
+        availableHours.textContent = `${emp.availableHours}h`;
+
+        const totalHours = document.createElement('div');
+        totalHours.style.cssText = `
+            font-size: 12px;
+            color: #6C757D;
+        `;
+        totalHours.textContent = `of 40h available`;
+
+        const progressBar = document.createElement('div');
+        progressBar.style.cssText = `
+            width: 100%;
+            height: 6px;
+            background: #E9ECEF;
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        `;
+
+        const progressFill = document.createElement('div');
+        const percentage = (emp.assignedHours / 40) * 100;
+        progressFill.style.cssText = `
+            height: 100%;
+            width: ${Math.min(percentage, 100)}%;
+            background: ${this.getAvailabilityColor(emp.availability)};
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        `;
+
+        progressBar.appendChild(progressFill);
+
+        hoursDisplay.appendChild(availableHours);
+        hoursDisplay.appendChild(totalHours);
+
+        section.appendChild(title);
+        section.appendChild(hoursDisplay);
+        section.appendChild(progressBar);
+
+        return section;
+    }
+
+    getAvailabilityColor(availability) {
+        const colors = {
+            'available': '#2E7D32',
+            'partial': '#E65100',
+            'full': '#1565C0',
+            'over': '#C62828'
+        };
+        return colors[availability] || '#6C757D';
     }
 
     createEmployeeSkills(emp) {
@@ -578,7 +785,7 @@ class UIManager {
             viewEmpRole: employee.role,
             viewEmpDepartment: employee.department,
             viewEmpExperience: employee.experience,
-            viewEmpWorkload: `${employee.workloadHours} hours/week`,
+            viewEmpWorkload: `${employee.assignedHours}h / 40h (${employee.availableHours}h available)`,
             viewEmpProjects: employee.projects.length > 0 ? employee.projects.join(', ') : 'None'
         };
 
@@ -588,7 +795,13 @@ class UIManager {
         });
 
         const avatar = document.getElementById('viewEmpAvatar');
-        if (avatar) avatar.src = employee.avatar;
+        if (avatar) {
+            avatar.src = employee.avatar;
+            avatar.style.objectFit = 'cover';
+            avatar.onerror = function() {
+                this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name)}&background=random&color=fff`;
+            };
+        }
 
         const skillsContainer = document.getElementById('viewEmpSkills');
         this.renderSkillsList(skillsContainer, employee.skills);
@@ -599,16 +812,20 @@ class UIManager {
         const name = document.getElementById('assignEmpName');
         const role = document.getElementById('assignEmpRole');
 
-        if (avatar) avatar.src = employee.avatar;
+        if (avatar) {
+            avatar.src = employee.avatar;
+            avatar.style.objectFit = 'cover';
+            avatar.onerror = function() {
+                this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name)}&background=random&color=fff`;
+            };
+        }
         if (name) name.textContent = employee.name;
         if (role) role.textContent = employee.role;
 
-        // Set default start date to today
         const today = new Date().toISOString().split('T')[0];
         const startDateInput = document.getElementById('assignStartDate');
         if (startDateInput) startDateInput.value = today;
 
-        // Reset form
         const form = document.getElementById('assignEmployeeForm');
         if (form) {
             form.reset();
@@ -638,6 +855,7 @@ class EmployeeApp {
             this.setupEventListeners();
             await this.loadEmployees();
             await this.loadSkillsFilter();
+            await updateUserNameDisplayEnhanced();
             await this.loadProjectsForAssignment();
         } catch (error) {
             console.error('Initialization error:', error);
@@ -686,7 +904,6 @@ class EmployeeApp {
     }
 
     setupModalListeners() {
-        // View Employee Modal
         ['closeViewModal', 'closeProfileBtn'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -694,7 +911,6 @@ class EmployeeApp {
             }
         });
 
-        // Assign Employee Modal
         ['closeAssignModal', 'cancelAssignBtn'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) {
@@ -707,7 +923,6 @@ class EmployeeApp {
             submitAssignBtn.addEventListener('click', () => this.submitAssignment());
         }
 
-        // Busy Employee Modal
         const cancelBusyBtn = document.getElementById('cancelBusyAssign');
         const proceedBusyBtn = document.getElementById('proceedBusyAssign');
 
@@ -725,7 +940,6 @@ class EmployeeApp {
             });
         }
 
-        // Close modals on overlay click
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -782,7 +996,6 @@ class EmployeeApp {
 
             let filtered = [...this.allEmployees];
 
-            // Filter by search query
             if (query) {
                 filtered = filtered.filter(emp =>
                     emp.name.toLowerCase().includes(query) ||
@@ -792,14 +1005,12 @@ class EmployeeApp {
                 );
             }
 
-            // Filter by skill
             if (selectedSkill) {
                 filtered = filtered.filter(emp =>
                     emp.skills.includes(selectedSkill)
                 );
             }
 
-            // Filter by availability
             if (selectedAvail) {
                 filtered = filtered.filter(emp => emp.availability === selectedAvail);
             }
@@ -938,6 +1149,16 @@ class EmployeeApp {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Fix navigation highlight
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    const employeeNavLink = document.querySelector('a[href*="employee.html"]');
+    if (employeeNavLink) {
+        employeeNavLink.classList.add('active');
+    }
+
     window.app = new EmployeeApp();
     window.app.init();
 });

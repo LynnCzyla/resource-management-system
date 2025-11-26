@@ -186,3 +186,40 @@
     background-color: rgba(74, 144, 226, 0.1);
     color: var(--accent-blue);
 }
+
+/* Task Detail Modal Styles */
+.task-detail-modal {
+    padding: 20px;
+}
+
+.task-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.task-detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.task-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.task-detail-label {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.task-detail-value {
+    color: var(--text-secondary);
+}

@@ -1,6 +1,5 @@
-/* ============================================
-   MODAL STYLES
-   ============================================ */
+/* RESOURCE MANAGEMENT (RM) dashboard-modals.css*/
+
 
 .modal-overlay {
     display: none;
@@ -322,4 +321,128 @@
         width: 100%;
         justify-content: center;
     }
+}
+
+/* ============================================
+   WORKLOG MODAL STYLES
+   ============================================ */
+
+.worklog-info {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.worklog-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: #F8F9FA;
+    border-radius: 8px;
+}
+
+.worklog-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.worklog-meta-item i {
+    color: #4A90E2;
+    width: 20px;
+}
+
+.worklog-meta-item strong {
+    color: #6C757D;
+    min-width: 80px;
+}
+
+.worklog-meta-item span {
+    color: #1A1A1A;
+    font-weight: 500;
+}
+
+.worklog-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.worklog-item {
+    padding: 16px;
+    background: white;
+    border: 1px solid #E0E0E0;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.worklog-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-color: #4A90E2;
+}
+
+.worklog-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.worklog-hours {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1A1A1A;
+}
+
+.worklog-type {
+    padding: 4px 12px;
+    background: #E3F2FD;
+    color: #1976d2;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.worklog-description {
+    font-size: 14px;
+    color: #495057;
+    line-height: 1.5;
+}
+
+.worklog-total {
+    padding: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 16px;
+    margin-top: 8px;
+}
+
+.worklog-total strong {
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #6C757D;
+    cursor: pointer;
+    padding: 4px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+    background: #F5F5F5;
+    color: #1A1A1A;
 }

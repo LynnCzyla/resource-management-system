@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Projects - PM Portal</title>
+    <title>Project Management My Projects</title>
     <link rel="stylesheet" href="../CSS_Files/My Projects.css">
+    <link rel="stylesheet" href="../CSS_Files/My Project-modals.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -26,16 +27,16 @@
                 <i class="fas fa-folder-open"></i>
                 <span>My Projects</span>
             </a>
-            <a href="../HTML_Files/Resource Finder.html" class="nav-item">
-                <i class="fas fa-search"></i>
-                <span>Resource Finder</span>
-            </a>
             <a href="../HTML_Files/Resource Requests.html" class="nav-item">
                 <i class="fas fa-paper-plane"></i>
                 <span>Resource Requests</span>
             </a>
+            <a href="../HTML_Files/projecttrack.html" class="nav-item">
+                <i class="fas fa-tasks"></i>
+                <span>Project Tracking</span>
+            </a>
         </nav>
-        
+
         <div class="sidebar-footer">
             <button class="logout-btn" id="logoutBtn">
                 <i class="fas fa-sign-out-alt"></i>
@@ -53,8 +54,8 @@
             </div>
             <div class="header-right">
                 <div class="user-info">
-                    <img src="https://ui-avatars.com/api/?name=Project+Manager&background=000&color=fff" alt="User" class="user-avatar">
-                    <span class="user-name">Sarah Williams</span>
+                    <img src="https://ui-avatars.com/api/?name=Sarah+Williams&background=000&color=fff" alt="User" class="user-avatar">
+                        <span class="user-name" id="userName">Project Manager</span>
                 </div>
             </div>
         </header>
@@ -81,152 +82,234 @@
             </div>
 
             <div class="projects-grid" id="projectsGrid">
-                <!-- Mock Project Card 1 -->
-                <div class="project-card" data-id="1" data-name="E-Commerce Platform" data-status="active" data-description="Building a modern e-commerce platform with React and Node.js" data-deadline="2024-12-31" data-teamsize="8" data-budget="$150,000" data-priority="high" data-progress="75">
-                    <div class="project-card-header">
-                        <div>
-                            <h3>E-Commerce Platform</h3>
-                            <span class="project-status active">Active</span>
-                        </div>
-                    </div>
-                    <div class="project-card-meta">
-                        <span><i class="fas fa-calendar"></i> Dec 31, 2024</span>
-                        <span><i class="fas fa-users"></i> 8 members</span>
-                        <span><i class="fas fa-dollar-sign"></i> $150,000</span>
-                    </div>
-                    <p class="project-card-description">Building a modern e-commerce platform with React and Node.js</p>
-                    <div class="project-card-actions">
-                        <button class="btn-view">
-                            <i class="fas fa-eye"></i> View Details
-                        </button>
-                        <button class="btn-edit">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Mock Project Card 2 -->
-                <div class="project-card" data-id="2" data-name="Mobile App Redesign" data-status="planning" data-description="Redesigning the mobile app UI/UX for better user experience" data-deadline="2024-10-15" data-teamsize="5" data-budget="$80,000" data-priority="medium" data-progress="20">
-                    <div class="project-card-header">
-                        <div>
-                            <h3>Mobile App Redesign</h3>
-                            <span class="project-status planning">Planning</span>
-                        </div>
-                    </div>
-                    <div class="project-card-meta">
-                        <span><i class="fas fa-calendar"></i> Oct 15, 2024</span>
-                        <span><i class="fas fa-users"></i> 5 members</span>
-                        <span><i class="fas fa-dollar-sign"></i> $80,000</span>
-                    </div>
-                    <p class="project-card-description">Redesigning the mobile app UI/UX for better user experience</p>
-                    <div class="project-card-actions">
-                        <button class="btn-view">
-                            <i class="fas fa-eye"></i> View Details
-                        </button>
-                        <button class="btn-edit">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Mock Project Card 3 -->
-                <div class="project-card" data-id="3" data-name="Data Analytics Dashboard" data-status="completed" data-description="Creating a comprehensive data analytics dashboard for business insights" data-deadline="2024-08-20" data-teamsize="6" data-budget="$120,000" data-priority="high" data-progress="100">
-                    <div class="project-card-header">
-                        <div>
-                            <h3>Data Analytics Dashboard</h3>
-                            <span class="project-status completed">Completed</span>
-                        </div>
-                    </div>
-                    <div class="project-card-meta">
-                        <span><i class="fas fa-calendar"></i> Aug 20, 2024</span>
-                        <span><i class="fas fa-users"></i> 6 members</span>
-                        <span><i class="fas fa-dollar-sign"></i> $120,000</span>
-                    </div>
-                    <p class="project-card-description">Creating a comprehensive data analytics dashboard for business insights</p>
-                    <div class="project-card-actions">
-                        <button class="btn-view">
-                            <i class="fas fa-eye"></i> View Details
-                        </button>
-                        <button class="btn-edit">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Mock Project Card 4 -->
-                <div class="project-card" data-id="4" data-name="API Integration Project" data-status="active" data-description="Integrating third-party APIs for enhanced functionality" data-deadline="2024-11-30" data-teamsize="4" data-budget="$60,000" data-priority="medium" data-progress="50">
-                    <div class="project-card-header">
-                        <div>
-                            <h3>API Integration Project</h3>
-                            <span class="project-status active">Active</span>
-                        </div>
-                    </div>
-                    <div class="project-card-meta">
-                        <span><i class="fas fa-calendar"></i> Nov 30, 2024</span>
-                        <span><i class="fas fa-users"></i> 4 members</span>
-                        <span><i class="fas fa-dollar-sign"></i> $60,000</span>
-                    </div>
-                    <p class="project-card-description">Integrating third-party APIs for enhanced functionality</p>
-                    <div class="project-card-actions">
-                        <button class="btn-view">
-                            <i class="fas fa-eye"></i> View Details
-                        </button>
-                        <button class="btn-edit">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Mock Project Card 5 -->
-                <div class="project-card" data-id="5" data-name="Security Audit Tool" data-status="on-hold" data-description="Developing a tool for automated security audits" data-deadline="2025-01-15" data-teamsize="7" data-budget="$200,000" data-priority="high" data-progress="10">
-                    <div class="project-card-header">
-                        <div>
-                            <h3>Security Audit Tool</h3>
-                            <span class="project-status on-hold">On Hold</span>
-                        </div>
-                    </div>
-                    <div class="project-card-meta">
-                        <span><i class="fas fa-calendar"></i> Jan 15, 2025</span>
-                        <span><i class="fas fa-users"></i> 7 members</span>
-                        <span><i class="fas fa-dollar-sign"></i> $200,000</span>
-                    </div>
-                    <p class="project-card-description">Developing a tool for automated security audits</p>
-                    <div class="project-card-actions">
-                        <button class="btn-view">
-                            <i class="fas fa-eye"></i> View Details
-                        </button>
-                        <button class="btn-edit">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Mock Project Card 6 -->
-                <div class="project-card" data-id="6" data-name="Customer Portal Upgrade" data-status="planning" data-description="Upgrading the customer portal with new features and improved design" data-deadline="2024-09-30" data-teamsize="9" data-budget="$180,000" data-priority="low" data-progress="30">
-                    <div class="project-card-header">
-                        <div>
-                            <h3>Customer Portal Upgrade</h3>
-                            <span class="project-status planning">Planning</span>
-                        </div>
-                    </div>
-                    <div class="project-card-meta">
-                        <span><i class="fas fa-calendar"></i> Sep 30, 2024</span>
-                        <span><i class="fas fa-users"></i> 9 members</span>
-                        <span><i class="fas fa-dollar-sign"></i> $180,000</span>
-                    </div>
-                    <p class="project-card-description">Upgrading the customer portal with new features and improved design</p>
-                    <div class="project-card-actions">
-                        <button class="btn-view">
-                            <i class="fas fa-eye"></i> View Details
-                        </button>
-                        <button class="btn-edit">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                </div>
+                <!-- Projects will be loaded dynamically -->
             </div>
         </div>
     </main>
+
+    <!-- Create New Project Modal -->
+    <div class="modal-overlay create-project-modal" id="createProjectModal">
+        <div class="modal-box modal-box-large">
+            <div class="modal-header">
+                <h2><i class="fas fa-plus-circle"></i> Create New Project</h2>
+                <button class="modal-close" id="closeCreateProjectModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="createProjectForm">
+                <div class="modal-body">
+                    <!-- Project Details Section -->
+                    <div class="project-details-section">
+                        <h4><i class="fas fa-info-circle"></i> Project Details</h4>
+                        
+                        <div class="project-form-grid">
+                            <div class="form-group">
+                                <label for="projectName">Project Name <span class="required">*</span></label>
+                                <input type="text" id="projectName" placeholder="Enter project name" required>
+                            </div>
+
+                            <div class="project-form-row-2">
+                                <div class="form-group">
+                                    <label for="teamSize">Team Size <span class="required">*</span></label>
+                                    <input type="number" id="teamSize" placeholder="Number of team members" min="1" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="duration">Duration (Days) <span class="required">*</span></label>
+                                    <input type="number" id="duration" placeholder="Project duration" min="1" required>
+                                </div>
+                            </div>
+
+
+                              <div class="project-form-row-2">
+                                <div class="form-group">
+                                    <label for="projectStartTime">Start Date <span class="required">*</span></label>
+                                    <input type="date" id="projectStartTime" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="projectEndTime">End Date <span class="required">*</span></label>
+                                    <input type="date" id="projectEndTime" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group project-description-field">
+                                <label for="projectDescription">Project Description</label>
+                                <textarea id="projectDescription" rows="3" placeholder="Describe the project objectives and scope..."></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="projectPriority">Priority <span class="required">*</span></label>
+                                <select id="projectPriority" required>
+                                    <option value="">Select Priority</option>
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resource Requirements Section -->
+                    <div class="resource-requirements-section">
+                        <h4><i class="fas fa-users"></i> Resource Requirements</h4>
+                        
+                        <div class="project-resource-rows-container" id="projectResourceRowsContainer">
+                            <!-- Resource rows will be added dynamically -->
+                        </div>
+
+                        <button type="button" class="project-btn-add-resource" id="addProjectResourceBtn">
+                            <i class="fas fa-plus"></i> Add Another Resource Requirement
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelCreateProjectBtn">Cancel</button>
+                    <button type="submit" class="primary-btn">
+                        <i class="fas fa-save"></i> Create Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Project Resource Row Template -->
+    <template id="projectResourceRowTemplate">
+        <div class="project-resource-row-header">
+            <h3 class="project-resource-row-title">
+                <i class="fas fa-user-tie"></i>
+                <span class="resource-title-text">Resource Requirement #1</span>
+            </h3>
+            <button type="button" class="project-btn-remove-resource" style="display: none;">
+                <i class="fas fa-times"></i> Remove
+            </button>
+        </div>
+
+        <div class="project-resource-form-row">
+            <div class="form-group">
+                <label>Position/Role <span class="required">*</span></label>
+                <input type="text" class="project-resource-position" placeholder="e.g., Frontend Developer" required>
+            </div>
+            <div class="form-group">
+                <label>Quantity Needed <span class="required">*</span></label>
+                <input type="number" class="project-resource-quantity" min="1" value="1" required>
+            </div>
+        </div>
+
+        <div class="project-resource-form-row-full">
+            <div class="form-group">
+                <label>Experience Level <span class="required">*</span></label>
+                <select class="project-resource-skill-level" required>
+                    <option value="">Select Level</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate" selected>Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Assignment Type <span class="required">*</span></label>
+                <select class="project-resource-assignment-type" required>
+                    <option value="">Select Type</option>
+                    <option value="Full-Time">Full-Time (40 hours/week)</option>
+                    <option value="Part-Time">Part-Time (20 hours/week)</option>
+                    <option value="Contract">Contract (15 hours/week)</option>
+                    <option value="Consultant">Consultant (5 hours/week)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Required Skills <span class="required">*</span></label>
+            <input type="text" class="project-resource-skills" placeholder="e.g., React, TypeScript, CSS (comma separated)" required>
+            <small class="form-hint">Separate multiple skills with commas</small>
+        </div>
+
+        <div class="form-group">
+            <label>Justification / Requirements</label>
+            <textarea class="project-resource-justification" rows="2" placeholder="Why is this resource needed? What will they work on?"></textarea>
+        </div>
+    </template>
+
+    <!-- Allocate Hours Modal - CORRECTED -->
+<div class="modal-overlay" id="allocateHoursModal">
+    <div class="modal-box modal-box-large">
+        <div class="modal-header">
+            <h2>Allocate Team Hours - <span id="modalProjectName">Project Name</span></h2>
+            <button class="modal-close" id="closeAllocateModal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="allocateForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="employeeSelect">Employee *</label>
+                        <select id="employeeSelect" required>
+                            <option value="">Select Team Member</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Employee Availability Display -->
+                <div class="availability-display" id="availabilityDisplay" style="display: none;">
+                    <div class="availability-header">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Employee Availability</strong>
+                    </div>
+                    
+                    <div class="availability-info">
+                        <div class="availability-item">
+                            <span class="availability-label">Status:</span>
+                            <span class="availability-badge available">
+                                <i class="fas fa-check-circle"></i> Available
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Assignment Info -->
+                    <div class="assignment-info"></div>
+
+                    <!-- Utilization Info -->
+                    <div class="utilization-info"></div>
+
+                    <!-- Skills Info -->
+                    <div class="skills-info"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startDate">Start Date *</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">End Date *</label>
+                        <input type="date" id="endDate" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="hoursPerDay">Hours per Day *</label>
+                        <input type="number" id="hoursPerDay" min="0" max="8" step="0.5" value="8" required>
+                        <small class="form-hint">Maximum hours based on employee availability</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="taskDescription">Task Description</label>
+                    <textarea id="taskDescription" rows="3" placeholder="Describe what this employee will be working on..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancelAllocate">Cancel</button>
+                    <button type="submit" class="primary-btn">
+                        <i class="fas fa-save"></i> Allocate Hours
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
     <!-- View Project Modal -->
     <div class="modal-overlay" id="viewProjectModal">
@@ -256,26 +339,13 @@
                         <span id="viewProjectTeamSize"></span>
                     </div>
                     <div class="detail-row">
-                        <span class="detail-label">Budget:</span>
+                        <span class="detail-label">Duration:</span>
                         <span id="viewProjectBudget"></span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Priority:</span>
-                        <span id="viewProjectPriority"></span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Progress:</span>
-                        <div style="width: 100%;">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="viewProjectProgress"></div>
-                            </div>
-                            <span id="viewProjectProgressText" style="font-size: 12px; color: #6C757D; margin-top: 4px; display: block;"></span>
-                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-primary" id="closeProjectBtn">Close</button>
+                <button type="button" class="btn-secondary" id="closeProjectBtn">Close</button>
             </div>
         </div>
     </div>
@@ -296,6 +366,7 @@
         </div>
     </div>
 
+    <!-- Loading Overlay -->
     <div class="modal-overlay" id="loadingOverlay">
         <div class="loading-spinner">
             <i class="fas fa-spinner fa-spin"></i>
@@ -303,8 +374,11 @@
         </div>
     </div>
 
+    <!-- Message Container -->
     <div id="messageContainer"></div>
 
     <script type="module" src="../JS_Files/My Projects.js"></script>
+    <script type="module" src="../JS_Files/newproject-modal.js"></script>
+
 </body>
 </html>

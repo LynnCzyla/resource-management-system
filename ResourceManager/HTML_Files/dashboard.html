@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,7 +56,7 @@
             <div class="header-right">
                 <div class="user-info">
                     <img src="https://ui-avatars.com/api/?name=Resource+Manager&background=000&color=fff" alt="User" class="user-avatar">
-                    <span class="user-name">Resource Manager</span>
+                        <span class="user-name" id="userName">Project Manager</span>
                 </div>
             </div>
         </header>
@@ -71,6 +72,15 @@
                     <div class="stat-info">
                         <h3 id="totalEmployees">0</h3>
                         <p>Total Employees</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalProjects">0</h3>
+                        <p>Active Projects</p>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -105,13 +115,12 @@
             <!-- Capacity Timeline View -->
             <div class="capacity-timeline-container">
                 <div class="timeline-header">
-                    <h2>Employee Capacity & Workload (8-Hour Target)</h2>
+                    <h2>Project Timeline & Team Workload</h2>
                     <div class="timeline-controls">
                         <!-- Filter Buttons -->
                         <div class="time-filter">
                             <button class="filter-btn active" data-period="today">Today</button>
                             <button class="filter-btn" data-period="week">This Week</button>
-                            <button class="filter-btn" data-period="month">This Month</button>
                         </div>
                         
                         <!-- Date Filter -->
@@ -123,7 +132,7 @@
                         <!-- Search Box -->
                         <div class="search-wrapper">
                             <i class="fas fa-search"></i>
-                            <input type="text" id="employeeSearch" placeholder="Search employee name or role..." />
+                            <input type="text" id="employeeSearch" placeholder="Search project, team member, or PM..." />
                         </div>
                         
                         <!-- Legend -->
@@ -143,117 +152,14 @@
                         <!-- Dates will be loaded here -->
                     </div>
 
-                    <!-- Employee Timeline Rows -->
+                    <!-- Project Timeline Rows -->
                     <div class="timeline-rows" id="timelineRows">
-                        <!-- Employee rows will be loaded here -->
+                        <!-- Project rows will be loaded here -->
                     </div>
-                </div>
-            </div>
-
-            <!-- Summary Stats -->
-            <div class="summary-grid">
-                <div class="summary-card">
-                    <h3>Average Hours Per Employee</h3>
-                    <div class="summary-value" id="avgHours">0h</div>
-                </div>
-                <div class="summary-card">
-                    <h3>Employees Below Target (&lt;8h)</h3>
-                    <div class="summary-value warning" id="belowTarget">0</div>
-                </div>
-                <div class="summary-card">
-                    <h3>Employees At Target (8h)</h3>
-                    <div class="summary-value success" id="atTarget">0</div>
-                </div>
-                <div class="summary-card">
-                    <h3>Employees Over Target (&gt;8h)</h3>
-                    <div class="summary-value danger" id="overTarget">0</div>
                 </div>
             </div>
         </div>
     </main>
-
-    <!-- EMPLOYEE DAILY ACTIVITY MODAL -->
-    <div class="modal-overlay" id="viewEmployeeModal">
-        <div class="modal-box modal-box-large">
-            <div class="modal-header">
-                <div class="employee-modal-header">
-                    <img id="viewEmpAvatar" class="employee-modal-avatar" alt="Employee Avatar">
-                    <div>
-                        <h2 id="viewEmpName">Employee Name</h2>
-                        <p id="viewEmpRole" class="employee-modal-subtitle"></p>
-                        <p id="viewEmpStatus" class="emp-status"></p>
-                    </div>
-                </div>
-                <button class="modal-close-btn" id="closeViewEmployee">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <!-- Activity Summary Cards -->
-                <div class="activity-summary-grid">
-                    <div class="activity-summary-card">
-                        <div class="activity-icon blue">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="activity-info">
-                            <h4 id="totalHoursToday">0h</h4>
-                            <p>Total Hours Today</p>
-                        </div>
-                    </div>
-                    <div class="activity-summary-card">
-                        <div class="activity-icon green">
-                            <i class="fas fa-tasks"></i>
-                        </div>
-                        <div class="activity-info">
-                            <h4 id="tasksCompleted">0</h4>
-                            <p>Tasks Completed</p>
-                        </div>
-                    </div>
-                    <div class="activity-summary-card">
-                        <div class="activity-icon orange">
-                            <i class="fas fa-spinner"></i>
-                        </div>
-                        <div class="activity-info">
-                            <h4 id="tasksInProgress">0</h4>
-                            <p>In Progress</p>
-                        </div>
-                    </div>
-                    <div class="activity-summary-card">
-                        <div class="activity-icon purple">
-                            <i class="fas fa-project-diagram"></i>
-                        </div>
-                        <div class="activity-info">
-                            <h4 id="activeProjects">0</h4>
-                            <p>Active Projects</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Today's Worklogs -->
-                <div class="activity-section">
-                    <h3 class="activity-section-title">
-                        <i class="fas fa-calendar-day"></i> Today's Worklogs
-                    </h3>
-                    <div class="timeline-container" id="dailyTimeline">
-                        <!-- Timeline items will be inserted here -->
-                    </div>
-                </div>
-
-                <!-- Active Projects -->
-                <div class="activity-section">
-                    <h3 class="activity-section-title">
-                        <i class="fas fa-briefcase"></i> Active Projects
-                    </h3>
-                    <div class="projects-list" id="activeProjectsList">
-                        <!-- Project cards will be inserted here -->
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-primary" id="closeViewModalBtn">Close</button>
-            </div>
-        </div>
-    </div>
 
     <!-- LOADING OVERLAY -->
     <div class="modal-overlay" id="loadingOverlay">
@@ -263,401 +169,59 @@
         </div>
     </div>
 
-        <!-- LOGOUT CONFIRMATION MODAL -->
-        <div class="modal-overlay" id="logoutModal">
-            <div class="modal-box modal-box-small">
-                <div class="modal-header">
-                    <h2>Confirm Logout</h2>
+    <!-- LOGOUT CONFIRMATION MODAL -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to logout?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WORKLOG DETAILS MODAL -->
+<div class="modal-overlay" id="worklogModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Work Log Details</h2>
+            <button class="modal-close" id="closeWorklogModal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="worklog-info">
+                <div class="worklog-meta">
+                    <div class="worklog-meta-item">
+                        <i class="fas fa-user"></i>
+                        <strong>Employee:</strong>
+                        <span id="worklogEmployeeName">-</span>
+                    </div>
+                    <div class="worklog-meta-item">
+                        <i class="fas fa-calendar"></i>
+                        <strong>Date:</strong>
+                        <span id="worklogDate">-</span>
+                    </div>
+                    <div class="worklog-meta-item">
+                        <i class="fas fa-project-diagram"></i>
+                        <strong>Project:</strong>
+                        <span id="worklogProjectName">-</span>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to logout?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
-                    <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+                
+                <div id="worklogList" class="worklog-entries">
+                    <!-- Worklogs will be populated here -->
                 </div>
             </div>
         </div>
-
-    <style>
-    /* Timeline Controls Spacing */
-    .timeline-controls {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        flex-wrap: wrap;
-    }
-
-    .time-filter {
-        display: flex;
-        gap: 8px;
-    }
-
-    .filter-btn {
-        padding: 8px 16px;
-        border: 1px solid #E9ECEF;
-        background: white;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
-        color: #495057;
-        transition: all 0.3s;
-    }
-
-    .filter-btn:hover {
-        background: #F8F9FA;
-    }
-
-    .filter-btn.active {
-        background: #000;
-        color: white;
-        border-color: #000;
-    }
-
-    /* Date Filter */
-    .date-filter-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        background: white;
-        border: 1px solid #E9ECEF;
-        border-radius: 8px;
-    }
-
-    .date-filter-wrapper label {
-        font-size: 14px;
-        font-weight: 500;
-        color: #495057;
-        white-space: nowrap;
-    }
-
-    .date-filter-wrapper input[type="date"] {
-        padding: 6px 10px;
-        border: 1px solid #CED4DA;
-        border-radius: 6px;
-        font-size: 14px;
-        color: #495057;
-        cursor: pointer;
-    }
-
-    /* Search Box */
-    .search-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        background: white;
-        border: 1px solid #E9ECEF;
-        border-radius: 8px;
-        min-width: 300px;
-    }
-
-    .search-wrapper i {
-        color: #6C757D;
-        font-size: 14px;
-    }
-
-    .search-wrapper input {
-        flex: 1;
-        border: none;
-        outline: none;
-        padding: 6px;
-        font-size: 14px;
-        color: #495057;
-    }
-
-    /* Legend */
-    .legend {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-left: auto;
-    }
-
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 13px;
-        color: #495057;
-    }
-
-    .legend-color {
-        width: 12px;
-        height: 12px;
-        border-radius: 3px;
-    }
-
-    .legend-color.available { background: #7ED321; }
-    .legend-color.partial { background: #F5A623; }
-    .legend-color.full { background: #4A90E2; }
-    .legend-color.over { background: #E74C3C; }
-
-    /* Modal Enhancements */
-    .modal-box-large {
-        max-width: 900px;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    .employee-modal-header {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-    }
-
-    .employee-modal-avatar {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        border: 3px solid #4A90E2;
-    }
-
-    .employee-modal-subtitle {
-        color: #6C757D;
-        font-size: 14px;
-        margin: 4px 0 0 0;
-    }
-
-    .modal-close-btn {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: none;
-        border: none;
-        font-size: 24px;
-        color: #6C757D;
-        cursor: pointer;
-        transition: color 0.3s;
-    }
-
-    .modal-close-btn:hover {
-        color: #333;
-    }
-
-    /* Activity Summary Grid */
-    .activity-summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-
-    .activity-summary-card {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 20px;
-        background: #F8F9FA;
-        border-radius: 12px;
-        border: 1px solid #E9ECEF;
-    }
-
-    .activity-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        color: white;
-    }
-
-    .activity-icon.blue { background: #4A90E2; }
-    .activity-icon.green { background: #7ED321; }
-    .activity-icon.orange { background: #F5A623; }
-    .activity-icon.purple { background: #9013FE; }
-
-    .activity-info h4 {
-        margin: 0;
-        font-size: 24px;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .activity-info p {
-        margin: 4px 0 0 0;
-        font-size: 13px;
-        color: #6C757D;
-    }
-
-    /* Activity Sections */
-    .activity-section {
-        margin-bottom: 24px;
-    }
-
-    .activity-section-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .activity-section-title i {
-        color: #4A90E2;
-    }
-
-    /* Timeline */
-    .timeline-container {
-        position: relative;
-        padding-left: 40px;
-    }
-
-    .timeline-item {
-        position: relative;
-        padding: 16px 0;
-        border-left: 2px solid #E9ECEF;
-        padding-left: 24px;
-    }
-
-    .timeline-item:last-child {
-        border-left-color: transparent;
-    }
-
-    .timeline-dot {
-        position: absolute;
-        left: -9px;
-        top: 20px;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        border: 3px solid #4A90E2;
-        background: white;
-    }
-
-    .timeline-dot.completed {
-        background: #7ED321;
-        border-color: #7ED321;
-    }
-
-    .timeline-dot.in-progress {
-        background: #F5A623;
-        border-color: #F5A623;
-    }
-
-    .timeline-time {
-        font-size: 13px;
-        color: #6C757D;
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-
-    .timeline-title {
-        font-size: 15px;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 4px;
-    }
-
-    .timeline-description {
-        font-size: 14px;
-        color: #6C757D;
-    }
-
-    .timeline-status {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 500;
-        margin-top: 6px;
-    }
-
-    .timeline-status.completed {
-        background: #E8F8E8;
-        color: #7ED321;
-    }
-
-    .timeline-status.in-progress {
-        background: #FFF4E6;
-        color: #F5A623;
-    }
-
-    /* Projects List */
-    .projects-list {
-        display: grid;
-        gap: 12px;
-    }
-
-    .project-card-mini {
-        padding: 16px;
-        background: #F8F9FA;
-        border-radius: 8px;
-        border-left: 4px solid #4A90E2;
-    }
-
-    .project-card-info h4 {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 600;
-        color: #333;
-    }
-
-    .project-card-info p {
-        margin: 4px 0 0 0;
-        font-size: 13px;
-        color: #6C757D;
-    }
-
-    /* Activities List */
-    .activities-list {
-        display: grid;
-        gap: 12px;
-    }
-
-    .activity-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        padding: 12px;
-        background: #F8F9FA;
-        border-radius: 8px;
-        border: 1px solid #E9ECEF;
-    }
-
-    .activity-item-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        flex-shrink: 0;
-    }
-
-    .activity-item-icon.completed { background: #E8F8E8; color: #7ED321; }
-
-    .activity-item-content {
-        flex: 1;
-    }
-
-    .activity-item-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 4px;
-    }
-
-    .activity-item-description {
-        font-size: 13px;
-        color: #6C757D;
-        margin-bottom: 4px;
-    }
-
-    .activity-item-time {
-        font-size: 12px;
-        color: #ADB5BD;
-    }
-    </style>
+    </div>
+</div>
 
     <script type="module" src="../JS_Files/dashboard.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
-</html>
+</html
