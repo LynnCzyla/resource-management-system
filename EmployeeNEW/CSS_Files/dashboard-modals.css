@@ -1,0 +1,225 @@
+/* SweetAlert2 Modal Customization for Dashboard */
+
+/* Modal Container */
+.swal2-popup {
+    border-radius: 8px;
+    padding: 24px;
+}
+
+/* Modal Title */
+.swal2-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Modal Content */
+.swal2-html-container {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* Modal Buttons */
+.swal2-confirm {
+    background-color: var(--primary-color) !important;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.swal2-confirm:hover {
+    background-color: #333333 !important;
+    transform: translateY(-2px);
+}
+
+.swal2-cancel {
+    background-color: var(--bg-gray) !important;
+    color: var(--text-primary) !important;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-weight: 600;
+}
+
+.swal2-cancel:hover {
+    background-color: var(--border-color) !important;
+}
+
+/* Loading Spinner */
+.swal2-loading {
+    border-color: var(--primary-color) transparent var(--primary-color) transparent;
+}
+
+/* Icon Styling */
+.swal2-icon {
+    border-width: 3px;
+}
+
+.swal2-icon.swal2-success {
+    border-color: var(--accent-green);
+}
+
+.swal2-icon.swal2-success [class^='swal2-success-line'] {
+    background-color: var(--accent-green);
+}
+
+.swal2-icon.swal2-error {
+    border-color: var(--accent-red);
+}
+
+.swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+    background-color: var(--accent-red);
+}
+
+.swal2-icon.swal2-warning {
+    border-color: var(--accent-orange);
+    color: var(--accent-orange);
+}
+
+.swal2-icon.swal2-info {
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+}
+
+/* Input Fields in Modals */
+.swal2-input,
+.swal2-textarea,
+.swal2-select {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.swal2-input:focus,
+.swal2-textarea:focus,
+.swal2-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Validation Message */
+.swal2-validation-message {
+    background-color: rgba(208, 2, 27, 0.1);
+    color: var(--accent-red);
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+/* Footer */
+.swal2-footer {
+    border-top: 1px solid var(--border-color);
+    padding-top: 16px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* Close Button */
+.swal2-close {
+    color: var(--text-secondary);
+    font-size: 32px;
+    transition: all 0.3s ease;
+}
+
+.swal2-close:hover {
+    color: var(--accent-red);
+}
+
+/* Progress Bar for Modal */
+.swal2-progresssteps {
+    margin-bottom: 16px;
+}
+
+.swal2-progresssteps li.swal2-active-progress-step {
+    background-color: var(--primary-color);
+}
+
+/* Timer Progress Bar */
+.swal2-timer-progress-bar {
+    background-color: var(--accent-blue);
+}
+
+/* Custom Classes for Specific Modals */
+.assignment-modal .assignment-status {
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.assignment-modal .assignment-status.in-progress {
+    background-color: rgba(74, 144, 226, 0.1);
+    color: var(--accent-blue);
+}
+
+.assignment-modal .assignment-status.pending {
+    background-color: rgba(245, 166, 35, 0.1);
+    color: var(--accent-orange);
+}
+
+.assignment-modal .assignment-status.completed {
+    background-color: rgba(126, 211, 33, 0.1);
+    color: var(--accent-green);
+}
+
+.assignment-modal .priority-badge {
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.assignment-modal .priority-badge.high {
+    background-color: rgba(208, 2, 27, 0.1);
+    color: var(--accent-red);
+}
+
+.assignment-modal .priority-badge.medium {
+    background-color: rgba(245, 166, 35, 0.1);
+    color: var(--accent-orange);
+}
+
+.assignment-modal .priority-badge.low {
+    background-color: rgba(74, 144, 226, 0.1);
+    color: var(--accent-blue);
+}
+
+/* Task Detail Modal Styles */
+.task-detail-modal {
+    padding: 20px;
+}
+
+.task-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.task-detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.task-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.task-detail-label {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.task-detail-value {
+    color: var(--text-secondary);
+}

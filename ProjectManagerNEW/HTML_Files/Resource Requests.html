@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resource Requests - PM Portal</title>
+    <link rel="stylesheet" href="../CSS_Files/Resource Requests.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module" src="../JS_Files/Resource Requests.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-project-diagram"></i>
+                <span>PM Portal</span>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="../HTML_Files/Dashboard.html" class="nav-item">
+                <i class="fas fa-line-chart"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="../HTML_Files/My Projects.html" class="nav-item">
+                <i class="fas fa-folder-open"></i>
+                <span>My Projects</span>
+            </a>
+            <a href="../HTML_Files/Resource Requests.html" class="nav-item active">
+                <i class="fas fa-paper-plane"></i>
+                <span>Resource Requests</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <h1>Resource Requests</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?name=Sarah+Williams&background=000&color=fff" alt="User" class="user-avatar">
+                    <span class="user-name">Sarah Williams</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <div class="page-header">
+                <h2>My Resource Requests</h2>
+                <button class="primary-btn" id="newRequestBtn">
+                    <i class="fas fa-plus"></i> New Request
+                </button>
+            </div>
+
+            <!-- Requests Container -->
+            <div class="requests-container">
+                <div class="requests-filter">
+                    <select id="requestStatusFilter" class="filter-select">
+                        <option value="">All Requests</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="requests-list" id="requestsList">
+                    <!-- Request Card 1 -->
+                    <div class="request-card">
+                        <div class="request-card-header">
+                            <div>
+                                <h4>Frontend Developer - Customer Portal Redesign</h4>
+                                <div class="request-card-meta">
+                                    <span><i class="fas fa-folder"></i> Customer Portal Redesign</span>
+                                    <span><i class="fas fa-calendar"></i> Submitted Oct 20, 2025</span>
+                                    <span><i class="fas fa-user"></i> 2 Resources</span>
+                                </div>
+                            </div>
+                            <span class="request-status pending">Pending</span>
+                        </div>
+                        <div class="request-details">
+                            <div class="detail-item">
+                                <strong>Skills</strong>
+                                <div class="skills-tags">
+                                    <span class="skill-tag">React</span>
+                                    <span class="skill-tag">TypeScript</span>
+                                    <span class="skill-tag">CSS</span>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Experience</strong>
+                                <span>Intermediate</span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Timeline</strong>
+                                <span>Nov 15 - May 15, 2026 (6 months)</span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Hours Required</strong>
+                                <span>8 hours/day</span>
+                            </div>
+                        </div>
+                        <div class="request-actions">
+                            <button class="btn-view">
+                                <i class="fas fa-eye"></i> View Details
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Request Card 2 -->
+                    <div class="request-card">
+                        <div class="request-card-header">
+                            <div>
+                                <h4>Mobile Developer - Mobile App Development</h4>
+                                <div class="request-card-meta">
+                                    <span><i class="fas fa-folder"></i> Mobile App Development</span>
+                                    <span><i class="fas fa-calendar"></i> Submitted Oct 18, 2025</span>
+                                    <span><i class="fas fa-user"></i> 1 Resource</span>
+                                </div>
+                            </div>
+                            <span class="request-status approved">Approved</span>
+                        </div>
+                        <div class="request-details">
+                            <div class="detail-item">
+                                <strong>Skills</strong>
+                                <div class="skills-tags">
+                                    <span class="skill-tag">React Native</span>
+                                    <span class="skill-tag">Swift</span>
+                                    <span class="skill-tag">Kotlin</span>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Experience</strong>
+                                <span>Advanced</span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Timeline</strong>
+                                <span>Dec 1, 2025 - Aug 1, 2026 (8 months)</span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Hours Required</strong>
+                                <span>8 hours/day</span>
+                            </div>
+                        </div>
+                        <div class="request-actions">
+                            <button class="btn-view">
+                                <i class="fas fa-eye"></i> View Details
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Request Card 3 -->
+                    <div class="request-card">
+                        <div class="request-card-header">
+                            <div>
+                                <h4>Backend Developer - API Integration</h4>
+                                <div class="request-card-meta">
+                                    <span><i class="fas fa-folder"></i> API Integration</span>
+                                    <span><i class="fas fa-calendar"></i> Submitted Oct 25, 2025</span>
+                                    <span><i class="fas fa-user"></i> 1 Resource</span>
+                                </div>
+                            </div>
+                            <span class="request-status pending">Pending</span>
+                        </div>
+                        <div class="request-details">
+                            <div class="detail-item">
+                                <strong>Skills</strong>
+                                <div class="skills-tags">
+                                    <span class="skill-tag">Node.js</span>
+                                    <span class="skill-tag">REST API</span>
+                                    <span class="skill-tag">PostgreSQL</span>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Experience</strong>
+                                <span>Intermediate</span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Timeline</strong>
+                                <span>Nov 5 - Feb 5, 2026 (3 months)</span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Hours Required</strong>
+                                <span>8 hours/day</span>
+                            </div>
+                        </div>
+                        <div class="request-actions">
+                            <button class="btn-view">
+                                <i class="fas fa-eye"></i> View Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- New Request Modal -->
+    <div class="modal-overlay" id="newRequestModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>Submit Resource Request</h2>
+                <button class="close-btn" id="closeRequestModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="requestForm">
+                    <!-- Common Fields -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="projectSelect">Project *</label>
+                            <select id="projectSelect" required>
+                                <option value="">Select a project</option>
+                                <option value="proj1">Customer Portal Redesign</option>
+                                <option value="proj2">API Integration</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="prioritySelect">Priority *</label>
+                            <select id="prioritySelect" required>
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Resource Rows Container -->
+                    <div id="resourceRowsContainer" class="resource-rows-container">
+                        <!-- Resource rows will be dynamically added here -->
+                    </div>
+
+                    <!-- Add Resource Button -->
+                    <button type="button" class="btn-add-resource" id="addResourceBtn">
+                        <i class="fas fa-plus"></i> Add Another Resource
+                    </button>
+
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelFormBtn">Cancel</button>
+                        <button type="submit" class="primary-btn">
+                            <i class="fas fa-paper-plane"></i> Submit Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Detail Modal -->
+    <div class="modal-overlay" id="requestDetailModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>Request Details</h2>
+                <button class="close-btn" id="closeDetailModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="requestDetailBody">
+                <div class="detail-view">
+                    <div class="detail-row">
+                        <span class="detail-label">Project:</span>
+                        <span>Customer Portal Redesign</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Position:</span>
+                        <span>Frontend Developer</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Skills:</span>
+                        <div class="skills-tags">
+                            <span class="skill-tag">React</span>
+                            <span class="skill-tag">TypeScript</span>
+                            <span class="skill-tag">CSS</span>
+                        </div>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Skill Level:</span>
+                        <span>Intermediate</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Timeline:</span>
+                        <span>Nov 15, 2025 - May 15, 2026</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Duration:</span>
+                        <span>6 months</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Hours:</span>
+                        <span>8 hours per day</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Justification:</span>
+                        <span>Need experienced frontend developers for portal redesign</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="closeDetailBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Modal -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-box modal-box-small">
+            <div class="modal-header">
+                <h2>Confirm Logout</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to logout?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="modal-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Message Container -->
+    <div id="messageContainer"></div>
+
+   
+</body>
+</html>

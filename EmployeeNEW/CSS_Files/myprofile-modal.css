@@ -1,0 +1,289 @@
+/* SweetAlert2 Modal Customization for Profile Page */
+
+/* Modal Container */
+.swal2-popup {
+    border-radius: 8px;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+/* Modal Title */
+.swal2-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #212529;
+    margin-bottom: 16px;
+}
+
+/* Modal Content */
+.swal2-html-container {
+    font-size: 14px;
+    color: #6C757D;
+    line-height: 1.6;
+}
+
+/* Modal Buttons */
+.swal2-confirm {
+    background-color: #000000 !important;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.swal2-confirm:hover {
+    background-color: #333333 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.swal2-cancel {
+    background-color: #E9ECEF !important;
+    color: #212529 !important;
+    border-radius: 6px;
+    padding: 10px 24px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.swal2-cancel:hover {
+    background-color: #DEE2E6 !important;
+}
+
+/* Button Actions Container */
+.swal2-actions {
+    gap: 12px;
+}
+
+/* Loading Spinner */
+.swal2-loading {
+    border-color: #000000 transparent #000000 transparent;
+}
+
+/* Icon Styling */
+.swal2-icon {
+    border-width: 3px;
+    margin: 20px auto;
+}
+
+.swal2-icon.swal2-success {
+    border-color: #7ED321;
+}
+
+.swal2-icon.swal2-success [class^='swal2-success-line'] {
+    background-color: #7ED321;
+}
+
+.swal2-icon.swal2-success .swal2-success-ring {
+    border-color: rgba(126, 211, 33, 0.3);
+}
+
+.swal2-icon.swal2-error {
+    border-color: #D0021B;
+}
+
+.swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+    background-color: #D0021B;
+}
+
+.swal2-icon.swal2-warning {
+    border-color: #F5A623;
+    color: #F5A623;
+}
+
+.swal2-icon.swal2-info {
+    border-color: #4A90E2;
+    color: #4A90E2;
+}
+
+/* Input Fields in Modals */
+.swal2-input,
+.swal2-textarea,
+.swal2-select {
+    border: 1px solid #DEE2E6;
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    width: 90%;
+    margin: 8px 0;
+}
+
+.swal2-input:focus,
+.swal2-textarea:focus,
+.swal2-select:focus {
+    border-color: #000000;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+    outline: none;
+}
+
+.swal2-textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Label Styling in Modals */
+.swal2-html-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #212529;
+    text-align: left;
+    font-size: 14px;
+}
+
+/* Form Container in Modals */
+.swal2-html-container > div {
+    text-align: left;
+}
+
+/* Validation Message */
+.swal2-validation-message {
+    background-color: rgba(208, 2, 27, 0.1);
+    color: #D0021B;
+    border-radius: 6px;
+    font-size: 13px;
+    padding: 8px 12px;
+    margin-top: 8px;
+}
+
+/* Footer */
+.swal2-footer {
+    border-top: 1px solid #DEE2E6;
+    padding-top: 16px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: #6C757D;
+}
+
+/* Close Button */
+.swal2-close {
+    color: #6C757D;
+    font-size: 32px;
+    transition: all 0.3s ease;
+}
+
+.swal2-close:hover {
+    color: #D0021B;
+}
+
+/* Progress Steps */
+.swal2-progresssteps {
+    margin-bottom: 16px;
+}
+
+.swal2-progresssteps li {
+    background-color: #E9ECEF;
+}
+
+.swal2-progresssteps li.swal2-active-progress-step {
+    background-color: #000000;
+}
+
+/* Timer Progress Bar */
+.swal2-timer-progress-bar {
+    background-color: #4A90E2;
+}
+
+/* Custom Skill Badge Display in Modal */
+.skill-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: #E9ECEF;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    margin: 4px;
+}
+
+/* CV Upload Success Modal - Extracted Skills */
+.extracted-skills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.extracted-skill {
+    padding: 6px 12px;
+    background-color: #E9ECEF;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.extracted-skill:hover {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+/* Experience Modal Styling */
+.experience-modal-content {
+    text-align: left;
+}
+
+.experience-modal-content input {
+    width: 90%;
+    margin-bottom: 16px;
+}
+
+/* File Preview in Modal */
+.file-preview-container {
+    padding: 20px;
+    background-color: #F8F9FA;
+    border-radius: 6px;
+    margin: 16px 0;
+}
+
+.file-preview-icon {
+    font-size: 64px;
+    color: #4A90E2;
+    margin-bottom: 12px;
+}
+
+.file-preview-info {
+    font-size: 14px;
+    color: #6C757D;
+}
+
+/* Delete Confirmation Modal */
+.swal2-popup.delete-confirmation {
+    border-left: 4px solid #D0021B;
+}
+
+/* Success Modal with Animation */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.swal2-popup {
+    animation: slideInUp 0.3s ease;
+}
+
+/* Responsive Modal Design */
+@media (max-width: 768px) {
+    .swal2-popup {
+        width: 90%;
+        padding: 20px;
+    }
+    
+    .swal2-title {
+        font-size: 20px;
+    }
+    
+    .swal2-input,
+    .swal2-textarea,
+    .swal2-select {
+        width: 100%;
+    }
+}

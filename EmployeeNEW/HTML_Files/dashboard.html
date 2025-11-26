@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard</title>
+    <link rel="stylesheet" href="../CSS_Files/dashboard.css">
+    <link rel="stylesheet" href="../CSS_Files/dashboard-modals.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-user-circle"></i>
+                <span>Employee Portal</span>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-item active">
+                <i class="fas fa-line-chart"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="myprofile.html" class="nav-item">
+                <i class="fas fa-user"></i>
+                <span>My Profile</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-header">
+            <div class="header-left">
+                <h1 id="pageTitle">My Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <img src="https://ui-avatars.com/api/?name=John+Doe&background=000&color=fff" alt="User" class="user-avatar" id="headerAvatar">
+                    <span class="user-name" id="headerName">John Doe</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Page -->
+        <div id="dashboardPage" class="page-content active">
+            <!-- Stats Cards -->
+          
+
+            <!-- Weekly Calendar Table -->
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <h2>Weekly Allocation Calendar</h2>
+                    <div class="week-navigation">
+                        <button class="week-nav-btn" id="prevWeek"><i class="fas fa-chevron-left"></i></button>
+                        <span class="week-range" id="weekRange">Nov 3 - Nov 7, 2025</span>
+                        <button class="week-nav-btn" id="nextWeek"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+
+                <div class="calendar-table-wrapper">
+                    <table class="calendar-table">
+                        <thead>
+                            <tr>
+                                <th class="time-column">Time</th>
+                                <th class="day-column">
+                                    <div class="day-header">
+                                        <div class="day-name">Monday</div>
+                                        <div class="day-date">Nov 3</div>
+                                        <div class="day-allocation full">8h / 8h</div>
+                                    </div>
+                                </th>
+                                <th class="day-column">
+                                    <div class="day-header">
+                                        <div class="day-name">Tuesday</div>
+                                        <div class="day-date">Nov 4</div>
+                                        <div class="day-allocation partial">7h / 8h</div>
+                                    </div>
+                                </th>
+                                <th class="day-column">
+                                    <div class="day-header">
+                                        <div class="day-name">Wednesday</div>
+                                        <div class="day-date">Nov 5</div>
+                                        <div class="day-allocation partial">6h / 8h</div>
+                                    </div>
+                                </th>
+                                <th class="day-column">
+                                    <div class="day-header">
+                                        <div class="day-name">Thursday</div>
+                                        <div class="day-date">Nov 6</div>
+                                        <div class="day-allocation full">8h / 8h</div>
+                                    </div>
+                                </th>
+                                <th class="day-column">
+                                    <div class="day-header">
+                                        <div class="day-name">Friday</div>
+                                        <div class="day-date">Nov 7</div>
+                                        <div class="day-allocation under">5h / 8h</div>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="calendarBody">
+                            <!-- Morning Slot -->
+                            <tr>
+                                <td class="time-cell">
+                                    <div class="time-label">Morning</div>
+                                    <div class="time-range">8:00 AM - 12:00 PM</div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item blue">
+                                        <div class="task-title">Website Redesign</div>
+                                        <div class="task-project">Project Alpha</div>
+                                        <div class="task-hours">4h</div>
+                                    </div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item blue">
+                                        <div class="task-title">UI Components</div>
+                                        <div class="task-project">Project Alpha</div>
+                                        <div class="task-hours">4h</div>
+                                    </div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item orange">
+                                        <div class="task-title">Database Design</div>
+                                        <div class="task-project">Project Beta</div>
+                                        <div class="task-hours">3h</div>
+                                    </div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item blue">
+                                        <div class="task-title">Code Review</div>
+                                        <div class="task-project">Project Alpha</div>
+                                        <div class="task-hours">4h</div>
+                                    </div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item green">
+                                        <div class="task-title">Testing Phase</div>
+                                        <div class="task-project">Project Alpha</div>
+                                        <div class="task-hours">3h</div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- Afternoon Slot -->
+                            <tr>
+                                <td class="time-cell">
+                                    <div class="time-label">Afternoon</div>
+                                    <div class="time-range">1:00 PM - 5:00 PM</div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item orange">
+                                        <div class="task-title">API Integration</div>
+                                        <div class="task-project">Project Beta</div>
+                                        <div class="task-hours">4h</div>
+                                    </div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item orange">
+                                        <div class="task-title">Backend Setup</div>
+                                        <div class="task-project">Project Beta</div>
+                                        <div class="task-hours">3h</div>
+                                    </div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item orange">
+                                        <div class="task-title">API Testing</div>
+                                        <div class="task-project">Project Beta</div>
+                                        <div class="task-hours">3h</div>
+                                    </div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item orange">
+                                        <div class="task-title">Documentation</div>
+                                        <div class="task-project">Project Beta</div>
+                                        <div class="task-hours">4h</div>
+                                    </div>
+                                </td>
+                                <td class="task-cell">
+                                    <div class="task-item red">
+                                        <div class="task-title">Client Meeting</div>
+                                        <div class="task-project">General</div>
+                                        <div class="task-hours">2h</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Legend -->
+                <div class="calendar-legend">
+                    <div class="legend-item">
+                        <div class="legend-color full"></div>
+                        <span>Fully Allocated (8h)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color partial"></div>
+                        <span>Partially Allocated (5-7h)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color under"></div>
+                        <span>Under Allocated (<5h)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Daily Summary -->
+            <div class="daily-summary">
+                <h2>Daily Task Summary</h2>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-header">
+                            <h3>Tasks Produced Today</h3>
+                            <span class="summary-count">2</span>
+                        </div>
+                        <div class="summary-list">
+                            <div class="summary-item">
+                                <span class="summary-bullet blue"></span>
+                                <span>Website Redesign - 4h</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-bullet orange"></span>
+                                <span>API Integration - 2h (In Progress)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-header">
+                            <h3>Available Time Today</h3>
+                            <span class="summary-count available">2h</span>
+                        </div>
+                        <div class="available-info">
+                            <p>You have 2 hours of available capacity remaining for today.</p>
+                            <p class="allocation-status">Current Allocation: <strong>6h / 8h (75%)</strong></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="../JS_Files/dashboard.js"></script>
+</body>
+</html>
