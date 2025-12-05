@@ -11,7 +11,7 @@ const CONFIG = {
     DEBOUNCE_DELAY: 300,
     MESSAGE_TIMEOUT: 5000,
     API_TIMEOUT: 10000,
-    API_BASE_URL: 'https://finalpls-resource-management-system.onrender.com'  // CHANGE THIS!
+     API_BASE_URL: 'https://finalpls-resource-management-system.onrender.com'  // CHANGE THIS!
 };
 
 const STATUS_COLORS = {
@@ -681,28 +681,47 @@ class ProjectApp {
             let recommendationsFailed = false;
             
             try {
-                // Use API_BASE_URL from CONFIG and add /api/ prefix
-                const res = await fetch(`${CONFIG.API_BASE_URL}/api/recommendations/${projectId}`, {
-                    method: 'POST',
+                console.log(`Fetching recommendations for project ${projectId}...`);
+                
+                // Use the correct endpoint from your API response
+                const response = await fetch(`${CONFIG.API_BASE_URL}/api/recommendations/${projectId}`, {
+                    method: 'POST',  // Check if this should be POST or GET
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({})
+                    // If it's a POST request that needs data, add body:
+                    body: JSON.stringify({
+                        project_id: projectId
+                        // Add any other required parameters
+                    })
                 });
                 
-                // Add timeout handling
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Request timeout')), CONFIG.API_TIMEOUT);
-                });
-                
-                const response = await Promise.race([res, timeoutPromise]);
+                console.log(`Response status: ${response.status}`);
                 
                 if (!response.ok) {
                     recommendationsFailed = true;
                     console.warn(`Recommendations API returned status: ${response.status}`);
+                    
+                    // Try GET if POST fails
+                    if (response.status === 405) { // Method Not Allowed
+                        console.log('Trying GET method instead...');
+                        const getResponse = await fetch(`${CONFIG.API_BASE_URL}/api/recommendations/${projectId}`, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'application/json'
+                            }
+                        });
+                        
+                        if (getResponse.ok) {
+                            const data = await getResponse.json();
+                            // Process data...
+                        }
+                    }
                 } else {
                     const data = await response.json();
+                    console.log('Received recommendations data:', data);
+                    
                     if (data.recommendations && Array.isArray(data.recommendations)) {
                         recommendedEmployees = data.recommendations.flatMap(r =>
                             r.recommended_employees.map(emp => ({
@@ -713,6 +732,7 @@ class ProjectApp {
                                 allocation_percent: emp.allocation_percent
                             }))
                         );
+                        console.log(`Processed ${recommendedEmployees.length} recommended employees`);
                     }
                 }
             } catch (err) {

@@ -57,9 +57,9 @@ def fix_html_file(folder, filename, api_url):
     content = content.replace('src="../JS_Files/', 'src="JS_Files/')
     content = content.replace('src="JS_Files/', f'../{folder_name}/JS_Files/')
     
-    # Fix API URLs in inline JavaScript
-    content = content.replace("http://localhost:8000", api_url)
-    content = content.replace("localhost:8000", api_url.replace("https://", "").replace("http://", ""))
+    # Fix API URLs in inline JavaScript - KEEP /api/ prefix!
+    content = content.replace("http://localhost:8000", f"{api_url}/api")  # ADD /api
+    content = content.replace("localhost:8000", f"{api_url.replace('https://', '').replace('http://', '')}/api")
     
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
@@ -73,25 +73,64 @@ def fix_js_file(folder, filename, api_url):
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
     
-    # Fix API URLs
-    content = content.replace("http://localhost:8000", api_url)
-    content = content.replace("localhost:8000", api_url.replace("https://", "").replace("http://", ""))
+    # Fix API URLs - KEEP /api/ prefix!
+    content = content.replace("http://localhost:8000", f"{api_url}/api")  # ADD /api
+    content = content.replace("localhost:8000", f"{api_url.replace('https://', '').replace('http://', '')}/api")
     
-    # Create a configuration object at the top of each JS file
+    # Remove the old API_CONFIG block if it exists (it has wrong URLs)
+    if "const API_CONFIG = {" in content:
+        # Find and remove the old config
+        lines = content.split('\n')
+        new_lines = []
+        in_config = False
+        brace_count = 0
+        
+        for line in lines:
+            if "const API_CONFIG = {" in line:
+                in_config = True
+                brace_count = 1
+                continue
+            
+            if in_config:
+                brace_count += line.count('{')
+                brace_count -= line.count('}')
+                if brace_count <= 0 and '}' in line:
+                    in_config = False
+                continue
+            
+            new_lines.append(line)
+        
+        content = '\n'.join(new_lines)
+    
+    # Create a NEW configuration object with correct URLs
     config_js = f"""
-// API Configuration
-const API_CONFIG = {{
-    BASE_URL: "{api_url}",
-    ENDPOINTS: {{
-        UPLOAD_CV: "{api_url}/api/upload_cv",
-        RECOMMENDATIONS: "{api_url}/api/recommendations",
-        PROCESS_RESUME: "{api_url}/api/process-resume"
-    }}
+// API Configuration for Static Site
+const API_BASE_URL = "{api_url}";
+const API_ENDPOINTS = {{
+    BASE_URL: API_BASE_URL,
+    UPLOAD_CV: API_BASE_URL + "/api/upload_cv",
+    RECOMMENDATIONS: API_BASE_URL + "/api/recommendations",
+    EXTRACT_SKILLS: API_BASE_URL + "/api/extract_skills",
+    PROCESS_RESUME: API_BASE_URL + "/api/process-resume"
 }};
+
+// Helper function for API calls
+async function apiFetch(endpoint, options = {{}}) {{
+    const url = API_BASE_URL + '/api' + endpoint;
+    const response = await fetch(url, {{
+        ...options,
+        headers: {{
+            'Content-Type': 'application/json',
+            ...options.headers
+        }}
+    }});
+    return response;
+}}
 """
     
-    # Add config to beginning of file
-    content = config_js + content
+    # Add config to beginning of file if not already there
+    if "API_BASE_URL" not in content:
+        content = config_js + "\n" + content
     
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(content)
