@@ -8,6 +8,7 @@ import logging
 from typing import List, Dict, Set, Tuple, Optional
 from functools import lru_cache
 import io
+import os
 import re
 from dataclasses import dataclass
 
@@ -22,9 +23,9 @@ router = APIRouter()
 # ============================================
 # SUPABASE CONNECTION
 # ============================================
-url = "https://edzqjailcajqxwxjxidg.supabase.co"
-key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkenFqYWlsY2FqcXh3eGp4aWRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNTE2NTQsImV4cCI6MjA3NjYyNzY1NH0.BKKCyEjW-l_CpOMKnpuAPO9ZCuBSL0Hr2lgAZjIeqb0"
-supabase: Client = create_client(url, key)
+url = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_SERVICE_KEY")  # use the secure key
+supabase = create_client(url, key)
 
 # ============================================
 # CONSTANTS & CONFIGURATION

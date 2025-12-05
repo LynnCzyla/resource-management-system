@@ -19,8 +19,8 @@ from PyPDF2 import PdfReader
 import gc
 
 # ---------- CONFIG ----------
-pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
-POPPLER_PATH = "/usr/bin"  # for poppler utils
+pytesseract.pytesseract.tesseract_cmd = os.getenv("TESSERACT_CMD", "/usr/bin/tesseract")
+POPPLER_PATH = os.getenv("POPPLER_PATH", "/usr/bin")
 
 # ---------- OPTIMIZATION CONFIG ----------
 PROCESSING_CONFIG = {
