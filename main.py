@@ -1,19 +1,19 @@
-# main.py - BACKEND API ONLY
+# main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from upload_cv import router as upload_router
 from project_recommendation import router as recommend_router
-from extract_skills import router as skills_router
+from extract_skills import router as skills_router  # This imports your extract_skills endpoint
 import os
 
 app = FastAPI(title="Resource Management System API")
 
-# CORS - allow requests from your static site
+# CORS configuration
 origins = [
-    "http://localhost:3000",  # Local frontend
-    "http://localhost:8000",  # Local backend
-    "https://finalpls-resource-management-system-frontend.onrender.com",  # Your static site
-    "*"  # For testing
+    "http://localhost:3000",
+    "http://localhost:8000", 
+    "https://finalpls-resource-management-system-frontend.onrender.com",
+    "*"
 ]
 
 app.add_middleware(
@@ -24,23 +24,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API routes
+# Include ONLY the endpoints you actually have
 app.include_router(upload_router, prefix="/api")
 app.include_router(recommend_router, prefix="/api")
-app.include_router(skills_router, prefix="/api")
+app.include_router(skills_router, prefix="/api")  # This adds /api/extract_skills
 
-# Root endpoint
+# Root endpoint - Update to show only ACTUAL endpoints
 @app.get("/")
 async def root():
     return {
         "message": "Resource Management System API",
         "endpoints": {
             "api_docs": "/docs",
-            "api_redoc": "/redoc",
+            "api_redoc": "/redoc", 
             "health": "/health",
             "upload_cv": "/api/upload_cv",
             "recommendations": "/api/recommendations/{project_id}",
-            "process_resume": "/api/process-resume"
+            "extract_skills": "/api/extract_skills"  # ONLY THIS from extract_skills.py
         },
         "frontend": "https://finalpls-resource-management-system-frontend.onrender.com"
     }

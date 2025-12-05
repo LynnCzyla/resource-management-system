@@ -18,6 +18,9 @@ import PyPDF2
 from PyPDF2 import PdfReader
 import gc
 
+# ---------- CREATE ROUTER ----------
+router = APIRouter()
+
 # ---------- CONFIG ----------
 pytesseract.pytesseract.tesseract_cmd = os.getenv("TESSERACT_CMD", "/usr/bin/tesseract")
 POPPLER_PATH = os.getenv("POPPLER_PATH", "/usr/bin")
