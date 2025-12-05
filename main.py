@@ -18,12 +18,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Define upload folder
-UPLOAD_DIR = Path(__file__).parent / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)  # make sure it exists
-
-# Mount uploads as static
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 # Mount all routers
 app.include_router(upload_router)
 app.include_router(recommend_router)

@@ -1,11 +1,15 @@
-from fastapi import APIRouter
+import fitz  # PyMuPDF
+from fastapi import APIRouter, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 import pandas as pd
 import json
 import logging
-from typing import List, Dict, Set, Tuple
+from typing import List, Dict, Set, Tuple, Optional
 from functools import lru_cache
+import io
+import re
+from dataclasses import dataclass
 
 # ============================================
 # LOGGING SETUP
@@ -46,6 +50,237 @@ NORMALIZED_SKILL_LOOKUP = {}
 for normalized, variants in SKILL_MAP.items():
     for variant in variants:
         NORMALIZED_SKILL_LOOKUP[variant] = normalized
+
+# ============================================
+# DATA CLASSES
+# ============================================
+@dataclass
+class PDFData:
+    text: str
+    metadata: Dict
+    num_pages: int
+
+# ============================================
+# PDF PROCESSING WITH PyMuPDF
+# ============================================
+def extract_text_from_pdf(pdf_bytes: bytes) -> PDFData:
+    """
+    Extract text from PDF using PyMuPDF with fallback strategies
+    """
+    try:
+        pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+        num_pages = pdf_document.page_count
+        full_text = []
+        metadata = {}
+        
+        # Extract metadata
+        doc_metadata = pdf_document.metadata
+        if doc_metadata:
+            metadata = {
+                "title": doc_metadata.get("title", ""),
+                "author": doc_metadata.get("author", ""),
+                "subject": doc_metadata.get("subject", ""),
+                "keywords": doc_metadata.get("keywords", ""),
+                "creator": doc_metadata.get("creator", ""),
+                "producer": doc_metadata.get("producer", ""),
+                "creation_date": doc_metadata.get("creationDate", ""),
+                "modification_date": doc_metadata.get("modDate", "")
+            }
+        
+        # Extract text from each page
+        for page_num in range(num_pages):
+            page = pdf_document[page_num]
+            
+            # Method 1: Standard text extraction
+            text = page.get_text()
+            
+            # Method 2: If no text found, try with textpage for better extraction
+            if not text.strip():
+                textpage = page.get_textpage()
+                text = textpage.extractText()
+            
+            # Method 3: If still no text, try OCR-like extraction with blocks
+            if not text.strip():
+                blocks = page.get_text("blocks")
+                text = "\n".join([block[4] for block in blocks if block[4]])
+            
+            full_text.append(text)
+        
+        pdf_document.close()
+        
+        return PDFData(
+            text="\n".join(full_text),
+            metadata=metadata,
+            num_pages=num_pages
+        )
+        
+    except Exception as e:
+        logger.error(f"Error extracting PDF text: {str(e)}")
+        raise Exception(f"Failed to extract PDF content: {str(e)}")
+
+def extract_text_with_coordinates(pdf_bytes: bytes) -> List[Dict]:
+    """
+    Extract text with coordinates for structured analysis
+    """
+    try:
+        pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+        structured_data = []
+        
+        for page_num in range(pdf_document.page_count):
+            page = pdf_document[page_num]
+            
+            # Get text with detailed information
+            blocks = page.get_text("dict")["blocks"]
+            
+            for block in blocks:
+                if "lines" in block:
+                    for line in block["lines"]:
+                        for span in line["spans"]:
+                            structured_data.append({
+                                "page": page_num + 1,
+                                "text": span["text"],
+                                "bbox": span["bbox"],
+                                "font": span["font"],
+                                "size": span["size"],
+                                "flags": span["flags"]
+                            })
+        
+        pdf_document.close()
+        return structured_data
+        
+    except Exception as e:
+        logger.error(f"Error extracting structured PDF data: {str(e)}")
+        return []
+
+def extract_tables_from_pdf(pdf_bytes: bytes) -> List[pd.DataFrame]:
+    """
+    Extract tables from PDF using PyMuPDF
+    """
+    try:
+        pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+        tables = []
+        
+        for page_num in range(pdf_document.page_count):
+            page = pdf_document[page_num]
+            
+            # Try to find tables by analyzing the page structure
+            tabs = page.find_tables()
+            
+            if tabs.tables:
+                for table in tabs.tables:
+                    # Convert table to pandas DataFrame
+                    df = table.to_pandas()
+                    tables.append(df)
+        
+        pdf_document.close()
+        return tables
+        
+    except Exception as e:
+        logger.error(f"Error extracting tables from PDF: {str(e)}")
+        return []
+
+def extract_images_from_pdf(pdf_bytes: bytes) -> List[Dict]:
+    """
+    Extract images from PDF
+    """
+    try:
+        pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+        images = []
+        
+        for page_num in range(pdf_document.page_count):
+            page = pdf_document[page_num]
+            image_list = page.get_images()
+            
+            for img_index, img in enumerate(image_list):
+                xref = img[0]
+                base_image = pdf_document.extract_image(xref)
+                
+                images.append({
+                    "page": page_num + 1,
+                    "index": img_index,
+                    "width": base_image["width"],
+                    "height": base_image["height"],
+                    "format": base_image["ext"],
+                    "data": base_image["image"][:100] if base_image.get("image") else None  # Preview only
+                })
+        
+        pdf_document.close()
+        return images
+        
+    except Exception as e:
+        logger.error(f"Error extracting images from PDF: {str(e)}")
+        return []
+
+# ============================================
+# TEXT ANALYSIS FUNCTIONS
+# ============================================
+def analyze_resume_text(text: str) -> Dict:
+    """
+    Analyze resume text to extract skills, experience, and other details
+    """
+    # Convert to lowercase for case-insensitive matching
+    text_lower = text.lower()
+    
+    # Extract potential skills
+    found_skills = []
+    for normalized_skill, variants in SKILL_MAP.items():
+        for variant in variants:
+            if variant in text_lower:
+                found_skills.append(normalized_skill)
+                break  # Avoid duplicate adds if multiple variants match
+    
+    # Extract experience level patterns
+    experience_level = "beginner"  # default
+    exp_patterns = {
+        "advanced": r"\b(senior|lead|expert|advanced|10\+|10\+\s*years)\b",
+        "intermediate": r"\b(mid-level|intermediate|3-5|3\+|5\+|3-5\s*years)\b",
+        "beginner": r"\b(junior|entry-level|fresher|0-2|1-2|0-3\s*years)\b"
+    }
+    
+    for level, pattern in exp_patterns.items():
+        if re.search(pattern, text_lower, re.IGNORECASE):
+            experience_level = level
+            break
+    
+    # Extract years of experience
+    years_exp = 0
+    year_patterns = [
+        r"(\d+)\s*\+?\s*years?\s*(?:of)?\s*experience",
+        r"experience\s*:\s*(\d+)\s*years?",
+        r"(\d+)\s*years?\s*(?:of)?\s*exp"
+    ]
+    
+    for pattern in year_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            try:
+                years_exp = int(match.group(1))
+                break
+            except:
+                pass
+    
+    # Extract potential job titles (simplified)
+    title_keywords = [
+        "developer", "engineer", "designer", "analyst", 
+        "manager", "architect", "consultant", "specialist"
+    ]
+    
+    possible_titles = []
+    for keyword in title_keywords:
+        if keyword in text_lower:
+            # Look for patterns like "Software Developer" or "Senior Engineer"
+            pattern = fr"\b(\w+\s+{keyword}|{keyword}\s+\w+)\b"
+            matches = re.findall(pattern, text_lower, re.IGNORECASE)
+            possible_titles.extend(matches)
+    
+    return {
+        "skills": list(set(found_skills)),
+        "experience_level": experience_level,
+        "years_experience": years_exp,
+        "possible_titles": list(set(possible_titles))[:5],  # Top 5 unique
+        "text_length": len(text),
+        "unique_words": len(set(text_lower.split()))
+    }
 
 # ============================================
 # UTILITY FUNCTIONS
@@ -105,6 +340,46 @@ def calculate_assignment_details(assignment_type: str, total_available_hours: in
     final_assignment_type = "Full-Time" if assigned_hours >= 35 else "Part-Time"
     
     return assigned_hours, allocation_percent, final_assignment_type
+
+# ============================================
+# PDF PROCESSING ENDPOINT
+# ============================================
+@router.post("/process-resume/")
+async def process_resume(file: UploadFile = File(...)):
+    """
+    Process resume PDF and extract information
+    """
+    try:
+        logger.info(f"Processing resume: {file.filename}")
+        
+        # Read PDF file
+        pdf_bytes = await file.read()
+        
+        # Extract text from PDF
+        pdf_data = extract_text_from_pdf(pdf_bytes)
+        
+        # Analyze resume content
+        analysis = analyze_resume_text(pdf_data.text)
+        
+        # Optional: Extract tables (if needed)
+        tables = extract_tables_from_pdf(pdf_bytes)
+        
+        # Optional: Extract images (preview only)
+        images = extract_images_from_pdf(pdf_bytes)
+        
+        return {
+            "filename": file.filename,
+            "num_pages": pdf_data.num_pages,
+            "metadata": pdf_data.metadata,
+            "analysis": analysis,
+            "extracted_tables": len(tables),
+            "extracted_images": len(images),
+            "text_preview": pdf_data.text[:1000] + "..." if len(pdf_data.text) > 1000 else pdf_data.text
+        }
+        
+    except Exception as e:
+        logger.error(f"Error processing resume: {str(e)}")
+        return {"error": str(e)}
 
 # ============================================
 # MAIN RECOMMENDATION ENDPOINT
@@ -240,4 +515,106 @@ def get_recommendations(project_id: int):
             'preferred_assignment_type', 
             'recommended_employees'
         ]].to_dict(orient='records')
+    }
+
+# ============================================
+# ENHANCED RESUME PROCESSING ENDPOINT
+# ============================================
+@router.post("/process-resume-enhanced/")
+async def process_resume_enhanced(file: UploadFile = File(...)):
+    """
+    Enhanced resume processing with PyMuPDF
+    """
+    try:
+        logger.info(f"Processing resume (enhanced): {file.filename}")
+        
+        # Read PDF file
+        pdf_bytes = await file.read()
+        
+        # Extract text and metadata
+        pdf_data = extract_text_from_pdf(pdf_bytes)
+        
+        # Extract structured text with coordinates
+        structured_data = extract_text_with_coordinates(pdf_bytes)
+        
+        # Analyze resume content
+        analysis = analyze_resume_text(pdf_data.text)
+        
+        # Extract tables
+        tables = extract_tables_from_pdf(pdf_bytes)
+        table_data = []
+        for i, table in enumerate(tables):
+            table_data.append({
+                "table_index": i,
+                "shape": table.shape,
+                "columns": list(table.columns),
+                "preview": table.head(3).to_dict(orient='records')
+            })
+        
+        # Extract images
+        images = extract_images_from_pdf(pdf_bytes)
+        
+        # Generate statistics
+        word_count = len(pdf_data.text.split())
+        char_count = len(pdf_data.text)
+        paragraph_count = len([p for p in pdf_data.text.split('\n\n') if p.strip()])
+        
+        return {
+            "filename": file.filename,
+            "num_pages": pdf_data.num_pages,
+            "metadata": pdf_data.metadata,
+            "analysis": analysis,
+            "statistics": {
+                "word_count": word_count,
+                "character_count": char_count,
+                "paragraph_count": paragraph_count,
+                "tables_found": len(tables),
+                "images_found": len(images),
+                "structured_blocks": len(structured_data)
+            },
+            "tables": table_data,
+            "images_preview": [{"page": img["page"], "dimensions": f"{img['width']}x{img['height']}"} 
+                              for img in images[:5]],  # First 5 images only
+            "text_sample": pdf_data.text[:500]  # First 500 chars
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in enhanced resume processing: {str(e)}")
+        return {"error": str(e)}
+
+# ============================================
+# BULK PDF PROCESSING ENDPOINT
+# ============================================
+@router.post("/process-multiple-resumes/")
+async def process_multiple_resumes(files: List[UploadFile] = File(...)):
+    """
+    Process multiple resumes in bulk
+    """
+    results = []
+    
+    for file in files:
+        try:
+            pdf_bytes = await file.read()
+            pdf_data = extract_text_from_pdf(pdf_bytes)
+            analysis = analyze_resume_text(pdf_data.text)
+            
+            results.append({
+                "filename": file.filename,
+                "status": "success",
+                "num_pages": pdf_data.num_pages,
+                "analysis": analysis
+            })
+            
+        except Exception as e:
+            results.append({
+                "filename": file.filename,
+                "status": "error",
+                "error": str(e)
+            })
+    
+    return {
+        "total_files": len(files),
+        "successful": len([r for r in results if r["status"] == "success"]),
+        "failed": len([r for r in results if r["status"] == "error"]),
+        "results": results
     }

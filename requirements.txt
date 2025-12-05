@@ -1,38 +1,26 @@
-python -m http.server 3000
-uvicorn project_recommendation:app --reload --host 0.0.0.0 --port 8000
-uvicorn extract_skills:app --reload --host 0.0.0.0 --port 8000
+fastapi==0.110.0
+uvicorn==0.30.0
 
+supabase-py==2.3.0
 
+pandas==2.2.2
+numpy==1.26.4
 
+python-multipart==0.0.9
+pydantic==2.6.4
+pydantic-settings==2.2.1
 
-tesseract-ocr-w64-setup-5.5.0.20241111.exe 
-pip install pandas fastapi uvicorn supabase
-pip install fastapi[all]
-python -m spacy download en_core_web_sm
- pip install pytesseract pillow python-docx spacy
-  pip install pdf2image
-  pip install PyPDF2 
-  pip install fpdf2
+spacy==3.8.7
 
-https://github.com/oschwartz10612/poppler-windows/releases/
+# PDF / Document processing
+PyMuPDF==1.26.6
+PyPDF2==3.0.1
+python-docx==1.2.0
 
+# OCR (Only needed if you still use pytesseract — optional)
+pytesseract==0.3.13
+Pillow==11.0.0
 
-
-
-# --- OPTIONAL LOCAL RUN ---
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("extract_skills:app", host="0.0.0.0", port=8000, reload=True)
-
-
-app = FastAPI(title="CV Skill Extractor API")
-
-origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Networking
+requests==2.31.0
+httpx==0.27.0

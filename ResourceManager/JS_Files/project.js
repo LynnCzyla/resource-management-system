@@ -1184,4 +1184,7 @@ let app;
 document.addEventListener('DOMContentLoaded', () => {
     app = new ProjectApp();
     app.init();
+    
+    // Make app globally available for onclick handlers
+    window.app = app;
 });
