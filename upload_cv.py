@@ -5,25 +5,47 @@ import logging
 from typing import List
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from supabase import create_client, Client
-from concurrent.futures import ThreadPoolExecutor
 import asyncio
 
-# ---------- Supabase Config ----------
-url = os.getenv("SUPABASE_URL")
-key = os.getenv("SUPABASE_SERVICE_KEY")  # use the secure key
+# ---------- Logging Config ----------
+logger = logging.getLogger("cv_upload_logger")
+
+router = APIRouter()
 
 # ---------- Configuration ----------
 BUCKET_NAME = "cvs"
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 ALLOWED_EXTENSIONS = {'.pdf', '.docx', '.doc', '.txt', '.png', '.jpg', '.jpeg'}
 
-# Initialize Supabase client
-supabase: Client = create_client(url, key)
+# ---------- Supabase Initialization ----------
+# Initialize as None, will be set when needed
+supabase = None
 
-# ---------- Logging Config ----------
-logger = logging.getLogger("cv_upload_logger")
-
-router = APIRouter()
+def get_supabase_client():
+    """Initialize Supabase client only when needed"""
+    global supabase
+    if supabase is not None:
+        return supabase
+    
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SERVICE_KEY")
+    
+    if not url:
+        logger.error("❌ SUPABASE_URL environment variable is not set")
+        logger.error("💡 Set it with: set SUPABASE_URL=your_url_here")
+        return None
+    if not key:
+        logger.error("❌ SUPABASE_SERVICE_KEY environment variable is not set")
+        logger.error("💡 Set it with: set SUPABASE_SERVICE_KEY=your_key_here")
+        return None
+    
+    try:
+        supabase = create_client(url, key)
+        logger.info("✅ Supabase client initialized successfully")
+        return supabase
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize Supabase client: {e}")
+        return None
 
 # ---------- Helper Functions ----------
 def generate_unique_filename(original_filename: str, employee_id: str) -> tuple[str, str]:
@@ -75,8 +97,13 @@ async def upload_to_supabase(file_path: str, content: bytes, filename: str) -> d
     try:
         logger.info(f"Uploading {filename} to {file_path}")
         
+        # Get Supabase client
+        supabase_client = get_supabase_client()
+        if not supabase_client:
+            return {"success": False, "error": "Supabase client not initialized. Check environment variables."}
+        
         # Upload file content directly
-        response = supabase.storage.from_(BUCKET_NAME).upload(file_path, content)
+        response = supabase_client.storage.from_(BUCKET_NAME).upload(file_path, content)
         
         # Check if upload was successful
         result = handle_supabase_response(response, "upload")
@@ -86,7 +113,7 @@ async def upload_to_supabase(file_path: str, content: bytes, filename: str) -> d
             return {
                 "success": True,
                 "file_path": file_path,
-                "public_url": supabase.storage.from_(BUCKET_NAME).get_public_url(file_path)
+                "public_url": supabase_client.storage.from_(BUCKET_NAME).get_public_url(file_path)
             }
         else:
             logger.error(f"❌ Upload failed for {filename}: {result.get('error', 'Unknown error')}")
@@ -212,8 +239,13 @@ async def list_cv(employee_id: str):
     try:
         logger.info(f"📁 Listing files for employee: {employee_id}")
         
+        # Get Supabase client
+        supabase_client = get_supabase_client()
+        if not supabase_client:
+            raise HTTPException(status_code=500, detail="Supabase client not initialized. Check environment variables.")
+        
         # List files from Supabase bucket
-        response = supabase.storage.from_(BUCKET_NAME).list(employee_id)
+        response = supabase_client.storage.from_(BUCKET_NAME).list(employee_id)
         
         # Handle response
         result = handle_supabase_response(response, "list")
@@ -225,7 +257,7 @@ async def list_cv(employee_id: str):
             if hasattr(item, 'name') or (isinstance(item, dict) and item.get('name')):
                 item_name = item.name if hasattr(item, 'name') else item['name']
                 file_path = f"{employee_id}/{item_name}"
-                public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(file_path)
+                public_url = supabase_client.storage.from_(BUCKET_NAME).get_public_url(file_path)
                 
                 files.append({
                     "filename": item_name,
@@ -262,12 +294,17 @@ async def delete_cv(employee_id: str, file_path: str):
     try:
         logger.info(f"🗑️ Deleting file: {file_path} for employee: {employee_id}")
         
+        # Get Supabase client
+        supabase_client = get_supabase_client()
+        if not supabase_client:
+            raise HTTPException(status_code=500, detail="Supabase client not initialized. Check environment variables.")
+        
         # Validate file path belongs to employee
         if not file_path.startswith(f"{employee_id}/"):
             raise HTTPException(status_code=400, detail="File path does not belong to this employee")
 
         # Delete file from Supabase bucket
-        response = supabase.storage.from_(BUCKET_NAME).remove([file_path])
+        response = supabase_client.storage.from_(BUCKET_NAME).remove([file_path])
 
         # Handle response
         result = handle_supabase_response(response, "delete")
@@ -296,8 +333,16 @@ async def test_supabase_connection():
     try:
         logger.info("🔌 Testing Supabase connection...")
         
+        # Get Supabase client
+        supabase_client = get_supabase_client()
+        if not supabase_client:
+            return {
+                "success": False,
+                "error": "❌ Supabase client not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables."
+            }
+        
         # Simple test - list buckets or try a small operation
-        response = supabase.storage.list_buckets()
+        response = supabase_client.storage.list_buckets()
         
         result = handle_supabase_response(response, "connection_test")
         if result["success"]:

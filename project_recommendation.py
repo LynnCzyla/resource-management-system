@@ -1,7 +1,5 @@
 import fitz  # PyMuPDF
-from fastapi import APIRouter, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-from supabase import create_client, Client
+from fastapi import APIRouter, UploadFile, File, HTTPException
 import pandas as pd
 import json
 import logging
@@ -21,11 +19,36 @@ logger = logging.getLogger("recommendation_logger")
 router = APIRouter()
 
 # ============================================
-# SUPABASE CONNECTION
+# SUPABASE CONNECTION - LAZY INITIALIZATION
 # ============================================
-url = os.getenv("SUPABASE_URL")
-key = os.getenv("SUPABASE_SERVICE_KEY")  # use the secure key
-supabase = create_client(url, key)
+supabase = None
+
+def get_supabase_client():
+    """Initialize Supabase client only when needed"""
+    global supabase
+    if supabase is not None:
+        return supabase
+    
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_SERVICE_KEY")
+    
+    if not url:
+        logger.error("❌ SUPABASE_URL environment variable is not set")
+        logger.error("💡 Set it with: set SUPABASE_URL=your_url_here")
+        return None
+    if not key:
+        logger.error("❌ SUPABASE_SERVICE_KEY environment variable is not set")
+        logger.error("💡 Set it with: set SUPABASE_SERVICE_KEY=your_key_here")
+        return None
+    
+    try:
+        from supabase import create_client
+        supabase = create_client(url, key)
+        logger.info("✅ Supabase client initialized successfully")
+        return supabase
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize Supabase client: {e}")
+        return None
 
 # ============================================
 # CONSTANTS & CONFIGURATION
@@ -387,136 +410,152 @@ async def process_resume(file: UploadFile = File(...)):
 # ============================================
 @router.post("/recommendations/{project_id}")
 def get_recommendations(project_id: int):
-    logger.info("Fetching project requirements for project_id=%s", project_id)
-    
-    # Fetch project requirements
-    project_req = supabase.table("project_requirements").select("*")\
-        .eq("project_id", project_id).execute().data
-    
-    if not project_req:
-        logger.info("No project requirements found for project_id=%s", project_id)
-        return {"recommendations": []}
-
-    # Convert to DataFrame and normalize skills
-    projects = pd.DataFrame(project_req)
-    projects['required_skills_normalized'] = projects['required_skills'].apply(
-        lambda skills: set(normalize_skill(s) for s in skills)
-    )
-
-    # Fetch all employees
-    users = supabase.table("user_details").select("*").execute().data
-    if not users:
-        logger.info("No employees found in the database.")
-        return {"recommendations": []}
-
-    # Prepare employees DataFrame
-    employees = pd.DataFrame(users)
-    
-    # Set default values for missing columns
-    default_columns = {
-        "skills": [],
-        "total_available_hours": 40,
-        "job_title": "",
-        "status": "",
-        "experience_level": ""
-    }
-    
-    for col, default_val in default_columns.items():
-        if col not in employees.columns:
-            employees[col] = default_val
-
-    # Parse and normalize skills efficiently
-    employees['skills_parsed'] = employees['skills'].apply(parse_skills)
-    employees['skills_normalized'] = employees['skills_parsed'].apply(
-        lambda skills: set(normalize_skill(s) for s in skills)
-    )
-    
-    # Normalize roles
-    employees['role'] = employees['job_title'].apply(normalize_role)
-    
-    # Filter eligible employees once
-    eligible_employees = employees[
-        (employees['role'] == "employee") & 
-        (employees['status'].str.lower() == "available")
-    ].copy()
-
-    logger.info("Eligible employees after filtering: %d found", len(eligible_employees))
-
-    if eligible_employees.empty:
-        logger.info("No eligible employees available.")
-        return {"recommendations": []}
-
-    # Pre-compute experience level groups for faster filtering
-    exp_groups = {
-        level: group for level, group in 
-        eligible_employees.groupby(eligible_employees['experience_level'].str.lower())
-    }
-
-    def recommend_employees_optimized(project_row):
-        """Optimized recommendation function with pre-computed data"""
-        exp_level = project_row['experience_level'].lower()
-        required_skills_set = project_row['required_skills_normalized']
+    """Get employee recommendations for a project"""
+    try:
+        # Get Supabase client
+        supabase_client = get_supabase_client()
+        if not supabase_client:
+            raise HTTPException(
+                status_code=500, 
+                detail="Database connection not available. Check SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables."
+            )
         
-        logger.info("Evaluating requirement: %s (%s)", 
-                   project_row['required_skills'], exp_level)
+        logger.info("Fetching project requirements for project_id=%s", project_id)
         
-        # Get candidates from pre-grouped data
-        candidates = exp_groups.get(exp_level)
+        # Fetch project requirements
+        project_req = supabase_client.table("project_requirements").select("*")\
+            .eq("project_id", project_id).execute().data
         
-        if candidates is None or candidates.empty:
-            logger.debug("No candidates found for experience level: %s", exp_level)
-            return []
+        if not project_req:
+            logger.info("No project requirements found for project_id=%s", project_id)
+            return {"recommendations": []}
 
-        # Vectorized skill matching
-        candidates = candidates.copy()
-        candidates['match_count'] = candidates['skills_normalized'].apply(
-            lambda emp_skills: count_matches_fast(emp_skills, required_skills_set)
+        # Convert to DataFrame and normalize skills
+        projects = pd.DataFrame(project_req)
+        projects['required_skills_normalized'] = projects['required_skills'].apply(
+            lambda skills: set(normalize_skill(s) for s in skills)
+        )
+
+        # Fetch all employees
+        users = supabase_client.table("user_details").select("*").execute().data
+        if not users:
+            logger.info("No employees found in the database.")
+            return {"recommendations": []}
+
+        # Prepare employees DataFrame
+        employees = pd.DataFrame(users)
+        
+        # Set default values for missing columns
+        default_columns = {
+            "skills": [],
+            "total_available_hours": 40,
+            "job_title": "",
+            "status": "",
+            "experience_level": ""
+        }
+        
+        for col, default_val in default_columns.items():
+            if col not in employees.columns:
+                employees[col] = default_val
+
+        # Parse and normalize skills efficiently
+        employees['skills_parsed'] = employees['skills'].apply(parse_skills)
+        employees['skills_normalized'] = employees['skills_parsed'].apply(
+            lambda skills: set(normalize_skill(s) for s in skills)
         )
         
-        # Filter and score in one pass
-        candidates = candidates[candidates['match_count'] > 0].copy()
-        candidates['score'] = candidates['match_count'] * EXP_WEIGHT.get(exp_level, 1)
+        # Normalize roles
+        employees['role'] = employees['job_title'].apply(normalize_role)
         
-        # Sort and limit
-        candidates = candidates.nlargest(project_row['quantity_needed'], 'score')
+        # Filter eligible employees once
+        eligible_employees = employees[
+            (employees['role'] == "employee") & 
+            (employees['status'].str.lower() == "available")
+        ].copy()
 
-        # Build recommendations
-        recommended_list = []
-        preferred_type = project_row.get('preferred_assignment_type', 'Full-Time')
-        
-        for _, emp in candidates.iterrows():
-            total_hours = emp.get('total_available_hours', 40)
-            assigned_hours, allocation_percent, final_type = calculate_assignment_details(
-                preferred_type, total_hours
+        logger.info("Eligible employees after filtering: %d found", len(eligible_employees))
+
+        if eligible_employees.empty:
+            logger.info("No eligible employees available.")
+            return {"recommendations": []}
+
+        # Pre-compute experience level groups for faster filtering
+        exp_groups = {
+            level: group for level, group in 
+            eligible_employees.groupby(eligible_employees['experience_level'].str.lower())
+        }
+
+        def recommend_employees_optimized(project_row):
+            """Optimized recommendation function with pre-computed data"""
+            exp_level = project_row['experience_level'].lower()
+            required_skills_set = project_row['required_skills_normalized']
+            
+            logger.info("Evaluating requirement: %s (%s)", 
+                       project_row['required_skills'], exp_level)
+            
+            # Get candidates from pre-grouped data
+            candidates = exp_groups.get(exp_level)
+            
+            if candidates is None or candidates.empty:
+                logger.debug("No candidates found for experience level: %s", exp_level)
+                return []
+
+            # Vectorized skill matching
+            candidates = candidates.copy()
+            candidates['match_count'] = candidates['skills_normalized'].apply(
+                lambda emp_skills: count_matches_fast(emp_skills, required_skills_set)
             )
+            
+            # Filter and score in one pass
+            candidates = candidates[candidates['match_count'] > 0].copy()
+            candidates['score'] = candidates['match_count'] * EXP_WEIGHT.get(exp_level, 1)
+            
+            # Sort and limit
+            candidates = candidates.nlargest(project_row['quantity_needed'], 'score')
 
-            recommended_list.append({
-                'employee_id': emp['employee_id'],
-                'user_id': emp['id'],
-                'assignment_type': final_type,
-                'assigned_hours': assigned_hours,
-                'allocation_percent': allocation_percent,
-                'total_available_hours': total_hours
-            })
+            # Build recommendations
+            recommended_list = []
+            preferred_type = project_row.get('preferred_assignment_type', 'Full-Time')
+            
+            for _, emp in candidates.iterrows():
+                total_hours = emp.get('total_available_hours', 40)
+                assigned_hours, allocation_percent, final_type = calculate_assignment_details(
+                    preferred_type, total_hours
+                )
 
-        logger.info("Recommended %d employees for %s", 
-                   len(recommended_list), project_row['required_skills'])
-        return recommended_list
+                recommended_list.append({
+                    'employee_id': emp['employee_id'],
+                    'user_id': emp['id'],
+                    'assignment_type': final_type,
+                    'assigned_hours': assigned_hours,
+                    'allocation_percent': allocation_percent,
+                    'total_available_hours': total_hours
+                })
 
-    # Apply recommendations
-    projects['recommended_employees'] = projects.apply(
-        recommend_employees_optimized, axis=1
-    )
+            logger.info("Recommended %d employees for %s", 
+                       len(recommended_list), project_row['required_skills'])
+            return recommended_list
 
-    # Return results
-    return {
-        "recommendations": projects[[
-            'experience_level', 
-            'required_skills', 
-            'preferred_assignment_type', 
-            'recommended_employees'
-        ]].to_dict(orient='records')
-    }
+        # Apply recommendations
+        projects['recommended_employees'] = projects.apply(
+            recommend_employees_optimized, axis=1
+        )
+
+        # Return results
+        return {
+            "recommendations": projects[[
+                'experience_level', 
+                'required_skills', 
+                'preferred_assignment_type', 
+                'recommended_employees'
+            ]].to_dict(orient='records')
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in recommendation system: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 # ============================================
 # ENHANCED RESUME PROCESSING ENDPOINT
