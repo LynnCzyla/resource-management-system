@@ -1,103 +1,143 @@
-// RESOURCE MANAGEMENT (RM) employee.js - Updated with Profile Pictures
+// RESOURCE MANAGEMENT (RM) employee.js - OPTIMIZED
 import { supabase } from "../../supabaseClient.js";
 
-async function updateUserNameDisplayEnhanced() {
-    const userNameElement = document.getElementById('userName');
-    const userAvatarElement = document.querySelector('.user-avatar');
-    
-    if (!userNameElement) {
-        console.warn('[USER DISPLAY] userName element not found');
-        return;
-    }
+// ============================================
+// CONFIGURATION & CONSTANTS
+// ============================================
+const CONFIG = {
+    DEBOUNCE_DELAY: 300,
+    STANDARD_HOURS: 40,
+    MIN_ASSIGN_HOURS: 1,
+    MAX_ASSIGN_HOURS: 40,
+    AVATAR_BASE_URL: 'https://ui-avatars.com/api/',
+    MESSAGE_TIMEOUT: 5000
+};
 
-    try {
-        const loggedUser = JSON.parse(localStorage.getItem('loggedUser') || '{}');
-        let displayName = '';
-        
-        if (loggedUser.name) {
-            displayName = loggedUser.name;
-            userNameElement.textContent = displayName;
-            console.log('[USER DISPLAY] User name updated to:', displayName);
-        } else if (loggedUser.email) {
-            try {
-                const { data: userData, error } = await supabase
-                    .from('users')
-                    .select('name')
-                    .eq('email', loggedUser.email)
-                    .single();
-                
-                if (!error && userData && userData.name) {
-                    displayName = userData.name;
-                    userNameElement.textContent = displayName;
-                    loggedUser.name = userData.name;
-                    localStorage.setItem('loggedUser', JSON.stringify(loggedUser));
-                    console.log('[USER DISPLAY] User name fetched from Supabase:', displayName);
-                } else {
-                    displayName = loggedUser.email.split('@')[0];
-                    userNameElement.textContent = displayName;
-                }
-            } catch (dbError) {
-                console.error('[USER DISPLAY] Error fetching from Supabase:', dbError);
-                displayName = loggedUser.email.split('@')[0];
-                userNameElement.textContent = displayName;
-            }
-        } else {
-            displayName = 'Project Manager';
-            userNameElement.textContent = displayName;
-            console.warn('[USER DISPLAY] No user information found');
-        }
-        
-        // Update avatar with user initials
-        if (userAvatarElement && displayName) {
-            const initials = displayName.split(' ')
-                .map(word => word.charAt(0).toUpperCase())
-                .join('')
-                .substring(0, 2);
-            
-            userAvatarElement.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=000&color=fff`;
-            userAvatarElement.alt = initials;
-            console.log('[USER DISPLAY] Avatar updated with initials:', initials);
-        }
-    } catch (error) {
-        console.error('[USER DISPLAY] Error updating user name:', error);
-        userNameElement.textContent = 'Project Manager';
-    }
-}
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
+const Utils = {
+    debounce(func, delay = CONFIG.DEBOUNCE_DELAY) {
+        let timeoutId;
+        return (...args) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => func.apply(this, args), delay);
+        };
+    },
 
-function debounce(func, delay = 300) {
-    let timeoutId;
-    return function (...args) {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func.apply(this, args), delay);
-    };
-}
+    parseUser() {
+        try {
+            return JSON.parse(localStorage.getItem('loggedUser') || '{}');
+        } catch {
+            return {};
+        }
+    },
+
+    formatDate(date = new Date()) {
+        return date.toISOString().split('T')[0];
+    },
+
+    isValidProfilePic(pic) {
+        return pic && pic.trim() && pic !== 'null' && pic !== 'undefined';
+    },
+
+    generateAvatar(name, background = 'random', color = 'fff') {
+        return `${CONFIG.AVATAR_BASE_URL}?name=${encodeURIComponent(name)}&background=${background}&color=${color}`;
+    },
+
+    getInitials(name) {
+        return name.split(' ')
+            .map(word => word.charAt(0).toUpperCase())
+            .join('')
+            .substring(0, 2);
+    }
+};
+
+// ============================================
+// USER DISPLAY MANAGER
+// ============================================
+const UserDisplay = {
+    async update() {
+        const userNameElement = document.getElementById('userName');
+        const userAvatarElement = document.querySelector('.user-avatar');
+        
+        if (!userNameElement) {
+            console.warn('[USER] User name element not found');
+            return;
+        }
+
+        try {
+            const loggedUser = Utils.parseUser();
+            let displayName = 'Project Manager';
+
+            if (loggedUser.name) {
+                displayName = loggedUser.name;
+                userNameElement.textContent = displayName;
+            } else if (loggedUser.email) {
+                displayName = await this.fetchUserName(loggedUser.email) || 
+                             loggedUser.email.split('@')[0];
+                userNameElement.textContent = displayName;
+            }
+
+            userNameElement.textContent = displayName;
+            
+            if (userAvatarElement) {
+                this.updateAvatar(userAvatarElement, displayName);
+            }
+
+        } catch (error) {
+            console.error('[USER] Error:', error);
+            userNameElement.textContent = 'Project Manager';
+        }
+    },
+
+    async fetchUserName(email) {
+        try {
+            const { data: userData, error } = await supabase
+                .from('users')
+                .select('name')
+                .eq('email', email)
+                .single();
+
+            if (!error && userData?.name) {
+                const loggedUser = Utils.parseUser();
+                loggedUser.name = userData.name;
+                localStorage.setItem('loggedUser', JSON.stringify(loggedUser));
+                return userData.name;
+            }
+        } catch (error) {
+            console.error('[USER] Fetch error:', error);
+        }
+        return null;
+    },
+
+    updateAvatar(element, name) {
+        element.src = Utils.generateAvatar(name, '000', 'fff');
+        element.alt = Utils.getInitials(name);
+        element.onerror = () => {
+            element.src = Utils.generateAvatar(name, '000', 'fff');
+        };
+    }
+};
 
 // ============================================
 // MODAL MANAGER
 // ============================================
-
 class ModalManager {
     static show(modalId) {
         const modal = document.getElementById(modalId);
-        if (!modal) {
-            console.warn(`Modal with id "${modalId}" not found`);
-            return;
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
     }
 
     static hide(modalId) {
         const modal = document.getElementById(modalId);
-        if (!modal) {
-            console.warn(`Modal with id "${modalId}" not found`);
-            return;
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
         }
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
     }
 
     static showLoading() {
@@ -112,7 +152,6 @@ class ModalManager {
 // ============================================
 // MESSAGE MANAGER
 // ============================================
-
 class MessageManager {
     static ICON_MAP = {
         success: 'fa-check-circle',
@@ -121,71 +160,49 @@ class MessageManager {
         info: 'fa-info-circle'
     };
 
-    static AUTO_DISMISS_DELAY = 5000;
-
     static show(message, type = 'info') {
-        const container = document.getElementById('messageContainer');
-        if (!container) {
-            console.warn('Message container not found');
-            return;
-        }
-
+        const container = this.getOrCreateContainer();
         const messageBox = this.createMessageBox(message, type);
         container.appendChild(messageBox);
 
-        setTimeout(() => {
-            messageBox.classList.add('fade-out');
-            setTimeout(() => messageBox.remove(), 300);
-        }, this.AUTO_DISMISS_DELAY);
+        setTimeout(() => messageBox.remove(), CONFIG.MESSAGE_TIMEOUT);
+    }
+
+    static getOrCreateContainer() {
+        let container = document.getElementById('messageContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'messageContainer';
+            document.body.appendChild(container);
+        }
+        return container;
     }
 
     static createMessageBox(message, type) {
         const messageBox = document.createElement('div');
         messageBox.className = `message-box ${type}`;
 
-        const icon = document.createElement('i');
-        icon.className = `fas ${this.ICON_MAP[type]}`;
+        messageBox.innerHTML = `
+            <i class="fas ${this.ICON_MAP[type]}"></i>
+            <span>${message}</span>
+            <button class="message-close" aria-label="Close message">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
 
-        const text = document.createElement('span');
-        text.textContent = message;
-
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'message-close';
-        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-        closeBtn.setAttribute('aria-label', 'Close message');
-        closeBtn.addEventListener('click', () => {
-            messageBox.classList.add('fade-out');
-            setTimeout(() => messageBox.remove(), 300);
-        });
-
-        messageBox.appendChild(icon);
-        messageBox.appendChild(text);
-        messageBox.appendChild(closeBtn);
-
+        messageBox.querySelector('.message-close').addEventListener('click', () => messageBox.remove());
         return messageBox;
     }
 
-    static success(message) {
-        this.show(message, 'success');
-    }
-
-    static error(message) {
-        this.show(message, 'error');
-    }
-
-    static warning(message) {
-        this.show(message, 'warning');
-    }
-
-    static info(message) {
-        this.show(message, 'info');
-    }
+    static success(message) { this.show(message, 'success'); }
+    static error(message) { this.show(message, 'error'); }
+    static warning(message) { this.show(message, 'warning'); }
+    static info(message) { this.show(message, 'info'); }
 }
 
 // ============================================
-// DATA SERVICE - WITH PROFILE PICTURES
+// DATA SERVICE - OPTIMIZED
 // ============================================
-
 class DataService {
     static EXPERIENCE_LEVEL_MAP = {
         'beginner': 'Beginner',
@@ -201,11 +218,15 @@ class DataService {
     };
 
     constructor() {
-        this.projects = [];
-        this.employees = [];
+        this.cache = new Map();
     }
 
     async getAllProjects() {
+        const cacheKey = 'allProjects';
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey);
+        }
+
         try {
             const { data, error } = await supabase
                 .from('projects')
@@ -214,171 +235,174 @@ class DataService {
                     name,
                     status,
                     end_date,
-                    created_by,
-                    users:created_by (id, name),
+                    users:created_by (name),
                     project_requirements (quantity_needed),
                     resource_requests (status)
                 `)
                 .eq('resource_requests.status', 'approved');
-    
+
             if (error) throw error;
-    
-            const approvedProjects = data.filter(proj =>
+
+            const approvedProjects = (data || []).filter(proj =>
                 (proj.resource_requests || []).some(req => req.status === 'approved')
             );
-    
-            return approvedProjects.map(proj => this.transformProject(proj));
+
+            const transformed = approvedProjects.map(proj => this.transformProject(proj));
+            this.cache.set(cacheKey, transformed);
+            return transformed;
+
         } catch (error) {
-            console.error('Error fetching projects:', error);
+            console.error('[DATA] Error fetching projects:', error);
             throw new Error('Failed to load projects. Please try again.');
         }
     }
 
     async getProjectById(id) {
+        const cacheKey = `project_${id}`;
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey);
+        }
+
         try {
             const rawId = this.extractRawId(id, 'PROJ');
-
             const { data, error } = await supabase
                 .from('projects')
-                .select(`
-                    id,
-                    name,
-                    status,
-                    end_date,
-                    users:created_by (name)
-                `)
+                .select('id, name, status, end_date, users:created_by (name)')
                 .eq('id', rawId)
                 .single();
 
             if (error) throw error;
+
+            this.cache.set(cacheKey, data);
             return data;
         } catch (error) {
-            console.error('Error fetching project:', error);
-            throw new Error('Failed to load project details. Please try again.');
+            console.error('[DATA] Error fetching project:', error);
+            throw new Error('Failed to load project details.');
         }
     }
 
     async getAllEmployees() {
+        const cacheKey = 'allEmployees';
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey);
+        }
+
         try {
-            console.log('[DATA SERVICE] Fetching all employees with profile pictures...');
+            console.log('[DATA] Fetching employees...');
             
-            // Get user details with profile pictures
-            const { data: userDetails, error: detailsError } = await supabase
-                .from('user_details')
-                .select(`
-                    employee_id,
-                    job_title,
-                    department,
-                    status,
-                    experience_level,
-                    skills,
-                    user_id,
-                    total_available_hours,
-                    profile_pic,
-                    users:user_id (id, name, email, role)
-                `);
+            const [userDetailsResult, assignmentsResult] = await Promise.all([
+                supabase.from('user_details')
+                    .select(`
+                        employee_id,
+                        job_title,
+                        department,
+                        status,
+                        experience_level,
+                        skills,
+                        user_id,
+                        total_available_hours,
+                        profile_pic,
+                        users:user_id (id, name, email, role)
+                    `),
+                supabase.from('project_assignments')
+                    .select('user_id, assigned_hours')
+                    .eq('status', 'assigned')
+            ]);
 
-            if (detailsError) throw detailsError;
+            if (userDetailsResult.error) throw userDetailsResult.error;
 
-            console.log('[DATA SERVICE] User details fetched:', userDetails?.length || 0);
+            const userDetails = userDetailsResult.data || [];
+            const assignments = assignmentsResult.data || [];
+
+            console.log('[DATA] User details fetched:', userDetails.length);
+
+            // Calculate assigned hours
+            const userAssignedHours = {};
+            assignments.forEach(assignment => {
+                userAssignedHours[assignment.user_id] = 
+                    (userAssignedHours[assignment.user_id] || 0) + 
+                    parseInt(assignment.assigned_hours || 0);
+            });
 
             // Filter out resource managers
-            const filteredEmployees = userDetails.filter(emp => {
-                const role = emp.users?.role || '';
-                return role !== 'resource_manager';
-            });
+            const employees = userDetails
+                .filter(emp => emp.users?.role !== 'resource_manager')
+                .map(emp => this.transformEmployee(emp, userAssignedHours[emp.user_id] || 0));
 
-            // Get all project assignments to calculate assigned hours
-            const { data: assignments, error: assignError } = await supabase
-                .from('project_assignments')
-                .select('user_id, assigned_hours')
-                .eq('status', 'assigned');
-
-            if (assignError) throw assignError;
-
-            // Calculate total assigned hours per user
-            const userAssignedHours = {};
-            assignments?.forEach(assignment => {
-                if (!userAssignedHours[assignment.user_id]) {
-                    userAssignedHours[assignment.user_id] = 0;
-                }
-                userAssignedHours[assignment.user_id] += parseInt(assignment.assigned_hours || 0);
-            });
-
-            const employees = filteredEmployees.map(emp => this.transformEmployee(emp, userAssignedHours[emp.user_id] || 0));
-            
-            console.log('[DATA SERVICE] Employees transformed:', employees.length);
+            console.log('[DATA] Employees transformed:', employees.length);
+            this.cache.set(cacheKey, employees);
             return employees;
+
         } catch (error) {
-            console.error('Error fetching employees:', error);
+            console.error('[DATA] Error fetching employees:', error);
             throw new Error('Failed to load employees. Please try again.');
         }
     }
 
     async getEmployeeById(id) {
+        const cacheKey = `employee_${id}`;
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey);
+        }
+
         try {
-            const { data, error } = await supabase
-                .from('user_details')
-                .select(`
-                    employee_id,
-                    job_title,
-                    department,
-                    status,
-                    experience_level,
-                    skills,
-                    user_id,
-                    total_available_hours,
-                    profile_pic,
-                    users:user_id (id, name, email, role)
-                `)
-                .eq('employee_id', id)
-                .single();
+            const [employeeResult, assignmentsResult] = await Promise.all([
+                supabase.from('user_details')
+                    .select(`
+                        employee_id,
+                        job_title,
+                        department,
+                        status,
+                        experience_level,
+                        skills,
+                        user_id,
+                        total_available_hours,
+                        profile_pic,
+                        users:user_id (id, name, email, role)
+                    `)
+                    .eq('employee_id', id)
+                    .single(),
+                supabase.from('project_assignments')
+                    .select('assigned_hours, project:projects (name)')
+                    .eq('user_id', id)
+                    .eq('status', 'assigned')
+            ]);
 
-            if (error) throw error;
+            if (employeeResult.error) throw employeeResult.error;
 
-            const userRole = data.users?.role || 'employee';
+            const employee = employeeResult.data;
+            const assignments = assignmentsResult.data || [];
+
+            // Get projects for project managers
             let projectNames = [];
-            let totalAssignedHours = 0;
-
-            // For Project Managers: Get projects they created
-            if (userRole === 'project_manager') {
-                const { data: createdProjects, error: projectError } = await supabase
+            if (employee.users?.role === 'project_manager') {
+                const { data: createdProjects } = await supabase
                     .from('projects')
                     .select('name')
-                    .eq('created_by', data.user_id)
+                    .eq('created_by', employee.user_id)
                     .in('status', ['pending', 'ongoing']);
-
-                if (projectError) {
-                    console.warn('Error fetching created projects:', projectError);
-                }
-
                 projectNames = createdProjects?.map(p => p.name) || [];
             }
 
-            // Get assigned hours and projects from project_assignments
-            const { data: assignments, error: assignError } = await supabase
-                .from('project_assignments')
-                .select('assigned_hours, project:projects (name)')
-                .eq('user_id', data.user_id)
-                .eq('status', 'assigned');
-
-            if (assignError) {
-                console.warn('Error fetching assignments:', assignError);
-            }
-
-            totalAssignedHours = assignments?.reduce((sum, a) => sum + parseInt(a.assigned_hours || 0), 0) || 0;
+            // Calculate assigned hours
+            const totalAssignedHours = assignments.reduce((sum, a) => 
+                sum + parseInt(a.assigned_hours || 0), 0);
             
-            // Add assigned projects to project names
-            const assignedProjectNames = assignments?.map(a => a.project?.name).filter(Boolean) || [];
+            // Add assigned projects
+            const assignedProjectNames = assignments.map(a => a.project?.name).filter(Boolean);
             projectNames = [...new Set([...projectNames, ...assignedProjectNames])];
 
-            return {
-                ...this.transformEmployee(data, totalAssignedHours),
+            const transformed = {
+                ...this.transformEmployee(employee, totalAssignedHours),
                 projects: projectNames
             };
+
+            this.cache.set(cacheKey, transformed);
+            return transformed;
+
         } catch (error) {
-            console.error('Error fetching employee:', error);
-            throw new Error('Failed to load employee details. Please try again.');
+            console.error('[DATA] Error fetching employee:', error);
+            throw new Error('Failed to load employee details.');
         }
     }
 
@@ -394,17 +418,19 @@ class DataService {
                 }]);
 
             if (error) throw error;
+            
+            // Clear cache to reflect changes
+            this.cache.clear();
             return { success: true };
         } catch (error) {
-            console.error('Error assigning employee:', error);
+            console.error('[DATA] Error assigning employee:', error);
             throw new Error('Failed to assign employee. Please try again.');
         }
     }
 
     transformProject(proj) {
         const teamSize = (proj.project_requirements || []).reduce(
-            (sum, r) => sum + (r.quantity_needed || 0),
-            0
+            (sum, r) => sum + (r.quantity_needed || 0), 0
         );
 
         return {
@@ -422,41 +448,28 @@ class DataService {
 
     transformEmployee(emp, assignedHours = 0) {
         const userName = emp.users?.name || 'Unnamed';
-        const totalAvailableHours = emp.total_available_hours || 40;
+        const totalAvailableHours = emp.total_available_hours || CONFIG.STANDARD_HOURS;
         
-        // Check if profile picture exists
+        // Get avatar URL
         const profilePic = emp.profile_pic;
-        const hasValidProfilePic = profilePic && 
-                                  profilePic.trim() !== '' && 
-                                  profilePic !== 'null' && 
-                                  profilePic !== 'undefined';
-        
-        // Use profile picture from database or fallback to UI Avatars
+        const hasValidProfilePic = Utils.isValidProfilePic(profilePic);
         const avatar = hasValidProfilePic
             ? profilePic
-            : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=random&color=fff`;
+            : Utils.generateAvatar(userName);
         
-        console.log(`[DATA SERVICE] Employee: ${userName}, Has Profile Pic: ${hasValidProfilePic}, Avatar: ${avatar}`);
-        
-        // Always use 40 hours as the base for calculation
-        const baseHours = 40;
-        let availableHours = 0;
+        // Calculate availability
+        const baseHours = CONFIG.STANDARD_HOURS;
         let availability = 'full';
         
-        if (totalAvailableHours === 0) {
-            availableHours = 0;
+        if (assignedHours >= 40) {
             availability = 'full';
+        } else if (assignedHours >= 21) {
+            availability = 'partial';
         } else {
-            availableHours = Math.max(0, baseHours - assignedHours);
-    
-            if (assignedHours >= 40) {
-                availability = 'full';
-            } else if (assignedHours >= 21) {
-                availability = 'partial';
-            } else {
-                availability = 'available';
-            }
+            availability = 'available';
         }
+        
+        const availableHours = Math.max(0, baseHours - assignedHours);
         
         return {
             id: emp.employee_id,
@@ -472,7 +485,7 @@ class DataService {
             availableHours: availableHours,
             projects: [],
             experience: this.formatExperienceLevel(emp.experience_level),
-            avatar: avatar // ✅ Real profile picture or fallback
+            avatar: avatar
         };
     }
 
@@ -491,174 +504,137 @@ class DataService {
     getUniqueSkills(employees) {
         const skillsSet = new Set();
         employees.forEach(emp => {
-            emp.skills.forEach(skill => skillsSet.add(skill));
+            (emp.skills || []).forEach(skill => skillsSet.add(skill));
         });
         return Array.from(skillsSet).sort();
     }
 }
 
 // ============================================
-// UI MANAGER
+// UI MANAGER - OPTIMIZED
 // ============================================
-
 class UIManager {
     constructor(dataService) {
         this.dataService = dataService;
+        this.templates = new Map();
+        this.initTemplates();
+    }
+
+    initTemplates() {
+        // Employee card template
+        this.templates.set('employeeCard', this.createEmployeeCardTemplate());
+    }
+
+    createEmployeeCardTemplate() {
+        const template = document.createElement('template');
+        template.innerHTML = `
+            <div class="employee-card" data-emp-id="">
+                <div class="employee-header">
+                    <img class="employee-avatar" src="" alt="">
+                    <div class="employee-info">
+                        <h3></h3>
+                        <div class="employee-role"></div>
+                        <span class="status-badge"></span>
+                    </div>
+                </div>
+                <div class="availability-section"></div>
+                <div class="employee-skills">
+                    <h4>Skills</h4>
+                    <div class="skills-list"></div>
+                </div>
+                <div class="employee-actions">
+                    <button class="btn-primary"><i class="fas fa-eye"></i> View Profile</button>
+                    <button class="btn-secondary"><i class="fas fa-plus"></i> Assign</button>
+                </div>
+            </div>
+        `;
+        return template;
     }
 
     renderEmployees(employees) {
         const grid = document.getElementById('employeeGrid');
-        if (!grid) {
-            console.warn('Employee grid container not found');
-            return;
-        }
+        if (!grid) return;
 
         if (employees.length === 0) {
-            grid.innerHTML = `
-                <div style="text-align: center; color: #6C757D; padding: 40px; grid-column: 1 / -1;">
-                    <i class="fas fa-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
-                    <p>No employees found</p>
-                </div>
-            `;
+            grid.innerHTML = this.getNoEmployeesHTML();
             return;
         }
 
         const fragment = document.createDocumentFragment();
-        employees.forEach(emp => {
-            const card = this.createEmployeeCard(emp);
-            fragment.appendChild(card);
-        });
-
+        employees.forEach(emp => fragment.appendChild(this.createEmployeeCard(emp)));
+        
         grid.innerHTML = '';
         grid.appendChild(fragment);
     }
 
     createEmployeeCard(emp) {
-        const card = document.createElement('div');
-        card.className = 'employee-card';
+        const template = this.templates.get('employeeCard');
+        const card = template.content.cloneNode(true).querySelector('.employee-card');
+        
         card.dataset.empId = emp.id;
+        
+        // Set avatar
+        const avatar = card.querySelector('.employee-avatar');
+        avatar.src = emp.avatar;
+        avatar.alt = `${emp.name}'s avatar`;
+        avatar.style.objectFit = 'cover';
+        avatar.onerror = () => {
+            avatar.src = Utils.generateAvatar(emp.name);
+        };
 
-        card.appendChild(this.createEmployeeHeader(emp));
-        card.appendChild(this.createAvailabilitySection(emp));
-        card.appendChild(this.createEmployeeSkills(emp));
-        card.appendChild(this.createEmployeeActions(emp));
+        // Set text content
+        card.querySelector('h3').textContent = emp.name;
+        card.querySelector('.employee-role').textContent = emp.role;
+        
+        // Set status badge
+        const statusBadge = card.querySelector('.status-badge');
+        statusBadge.textContent = DataService.AVAILABILITY_MAP[emp.availability] || emp.availability;
+        statusBadge.className = `status-badge ${emp.availability}`;
+
+        // Update availability section
+        this.updateAvailabilitySection(card, emp);
+        
+        // Update skills
+        this.updateSkillsSection(card, emp);
+        
+        // Set button event listeners
+        const buttons = card.querySelectorAll('button');
+        buttons[0].onclick = () => window.app.viewEmployee(emp.id);
+        buttons[1].onclick = () => window.app.assignEmployee(emp.id);
 
         return card;
     }
 
-    createEmployeeHeader(emp) {
-        const header = document.createElement('div');
-        header.className = 'employee-header';
+    updateAvailabilitySection(card, emp) {
+        const section = card.querySelector('.availability-section');
+        const color = this.getAvailabilityColor(emp.availability);
+        const percentage = (emp.assignedHours / CONFIG.STANDARD_HOURS) * 100;
 
-        const avatar = document.createElement('img');
-        avatar.src = emp.avatar;
-        avatar.alt = `${emp.name}'s avatar`;
-        avatar.className = 'employee-avatar';
-        avatar.style.objectFit = 'cover'; // Ensure proper image display
-        
-        // Add error handler for broken images
-        avatar.onerror = function() {
-            this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(emp.name)}&background=random&color=fff`;
-        };
-
-        const info = document.createElement('div');
-        info.className = 'employee-info';
-
-        const name = document.createElement('h3');
-        name.textContent = emp.name;
-
-        const role = document.createElement('div');
-        role.className = 'employee-role';
-        role.textContent = emp.role;
-
-        const statusBadge = document.createElement('span');
-        statusBadge.className = `status-badge ${emp.availability}`;
-        statusBadge.textContent = DataService.AVAILABILITY_MAP[emp.availability] || emp.availability;
-
-        info.appendChild(name);
-        info.appendChild(role);
-        info.appendChild(statusBadge);
-
-        header.appendChild(avatar);
-        header.appendChild(info);
-
-        return header;
+        section.innerHTML = `
+            <div style="padding: 12px 16px; background: #F8F9FA; border-radius: 8px; margin-bottom: 8px;">
+                <div style="font-size: 11px; font-weight: 600; color: #6C757D; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                    Availability
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                    <div style="font-size: 24px; font-weight: 700; color: ${color};">${emp.availableHours}h</div>
+                    <div style="font-size: 12px; color: #6C757D;">of 40h available</div>
+                </div>
+                <div style="width: 100%; height: 6px; background: #E9ECEF; border-radius: 3px; margin-top: 8px; overflow: hidden;">
+                    <div style="height: 100%; width: ${Math.min(percentage, 100)}%; background: ${color}; border-radius: 3px; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+        `;
     }
 
-    createAvailabilitySection(emp) {
-        const section = document.createElement('div');
-        section.className = 'availability-section';
-        section.style.cssText = `
-            padding: 12px 16px;
-            background: #F8F9FA;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        `;
-
-        const title = document.createElement('div');
-        title.style.cssText = `
-            font-size: 11px;
-            font-weight: 600;
-            color: #6C757D;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-        `;
-        title.textContent = 'Availability';
-
-        const hoursDisplay = document.createElement('div');
-        hoursDisplay.style.cssText = `
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-        `;
-
-        const availableHours = document.createElement('div');
-        availableHours.style.cssText = `
-            font-size: 24px;
-            font-weight: 700;
-            color: ${this.getAvailabilityColor(emp.availability)};
-        `;
-        availableHours.textContent = `${emp.availableHours}h`;
-
-        const totalHours = document.createElement('div');
-        totalHours.style.cssText = `
-            font-size: 12px;
-            color: #6C757D;
-        `;
-        totalHours.textContent = `of 40h available`;
-
-        const progressBar = document.createElement('div');
-        progressBar.style.cssText = `
-            width: 100%;
-            height: 6px;
-            background: #E9ECEF;
-            border-radius: 3px;
-            margin-top: 8px;
-            overflow: hidden;
-        `;
-
-        const progressFill = document.createElement('div');
-        const percentage = (emp.assignedHours / 40) * 100;
-        progressFill.style.cssText = `
-            height: 100%;
-            width: ${Math.min(percentage, 100)}%;
-            background: ${this.getAvailabilityColor(emp.availability)};
-            border-radius: 3px;
-            transition: width 0.3s ease;
-        `;
-
-        progressBar.appendChild(progressFill);
-
-        hoursDisplay.appendChild(availableHours);
-        hoursDisplay.appendChild(totalHours);
-
-        section.appendChild(title);
-        section.appendChild(hoursDisplay);
-        section.appendChild(progressBar);
-
-        return section;
+    updateSkillsSection(card, emp) {
+        const skillsList = card.querySelector('.skills-list');
+        if (emp.skills.length === 0) {
+            skillsList.innerHTML = '<span style="color: #999; font-size: 14px;">No skills listed</span>';
+        } else {
+            skillsList.innerHTML = emp.skills.map(skill => 
+                `<span class="skill-tag">${skill}</span>`
+            ).join('');
+        }
     }
 
     getAvailabilityColor(availability) {
@@ -671,111 +647,33 @@ class UIManager {
         return colors[availability] || '#6C757D';
     }
 
-    createEmployeeSkills(emp) {
-        const skillsSection = document.createElement('div');
-        skillsSection.className = 'employee-skills';
-
-        const skillsTitle = document.createElement('h4');
-        skillsTitle.textContent = 'Skills';
-
-        const skillsList = document.createElement('div');
-        skillsList.className = 'skills-list';
-
-        if (emp.skills.length === 0) {
-            skillsList.innerHTML = '<span style="color: #999; font-size: 14px;">No skills listed</span>';
-        } else {
-            emp.skills.forEach(skill => {
-                const skillTag = document.createElement('span');
-                skillTag.className = 'skill-tag';
-                skillTag.textContent = skill;
-                skillsList.appendChild(skillTag);
-            });
-        }
-
-        skillsSection.appendChild(skillsTitle);
-        skillsSection.appendChild(skillsList);
-
-        return skillsSection;
-    }
-
-    createEmployeeActions(emp) {
-        const actions = document.createElement('div');
-        actions.className = 'employee-actions';
-
-        const viewBtn = document.createElement('button');
-        viewBtn.className = 'btn-primary';
-        viewBtn.innerHTML = '<i class="fas fa-eye"></i> View Profile';
-        viewBtn.onclick = () => window.app.viewEmployee(emp.id);
-
-        const assignBtn = document.createElement('button');
-        assignBtn.className = 'btn-secondary';
-        assignBtn.innerHTML = '<i class="fas fa-plus"></i> Assign';
-        assignBtn.onclick = () => window.app.assignEmployee(emp.id);
-
-        actions.appendChild(viewBtn);
-        actions.appendChild(assignBtn);
-
-        return actions;
+    getNoEmployeesHTML() {
+        return `
+            <div style="text-align: center; color: #6C757D; padding: 40px; grid-column: 1 / -1;">
+                <i class="fas fa-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>No employees found</p>
+            </div>
+        `;
     }
 
     populateSkillsDropdown(dropdown, skills) {
-        if (!dropdown) {
-            console.warn('Skills dropdown not found');
-            return;
-        }
-
-        dropdown.innerHTML = '<option value="">All Skills</option>';
-
-        skills.forEach(skill => {
-            const option = document.createElement('option');
-            option.value = skill;
-            option.textContent = skill;
-            dropdown.appendChild(option);
-        });
+        if (!dropdown) return;
+        
+        dropdown.innerHTML = '<option value="">All Skills</option>' + 
+            skills.map(skill => `<option value="${skill}">${skill}</option>`).join('');
     }
 
     populateProjectsDropdown(dropdown, projects) {
-        if (!dropdown) {
-            console.warn('Projects dropdown not found');
-            return;
-        }
-
-        dropdown.innerHTML = '<option value="">-- Select a project --</option>';
+        if (!dropdown) return;
 
         const activeProjects = projects.filter(p => 
             p.status === 'ongoing' || p.status === 'pending'
         );
 
-        activeProjects.forEach(proj => {
-            const option = document.createElement('option');
-            option.value = proj.rawId;
-            option.textContent = `${proj.name} (${proj.status})`;
-            dropdown.appendChild(option);
-        });
-    }
-
-    renderSkillsList(container, skills) {
-        if (!container) {
-            console.warn('Skills list container not found');
-            return;
-        }
-
-        if (skills.length === 0) {
-            container.innerHTML = '<span style="color: #999;">No skills listed</span>';
-            return;
-        }
-
-        const fragment = document.createDocumentFragment();
-
-        skills.forEach(skill => {
-            const span = document.createElement('span');
-            span.className = 'skill-badge';
-            span.textContent = skill;
-            fragment.appendChild(span);
-        });
-
-        container.innerHTML = '';
-        container.appendChild(fragment);
+        dropdown.innerHTML = '<option value="">-- Select a project --</option>' + 
+            activeProjects.map(proj => 
+                `<option value="${proj.rawId}">${proj.name} (${proj.status})</option>`
+            ).join('');
     }
 
     populateEmployeeModal(employee) {
@@ -798,13 +696,25 @@ class UIManager {
         if (avatar) {
             avatar.src = employee.avatar;
             avatar.style.objectFit = 'cover';
-            avatar.onerror = function() {
-                this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name)}&background=random&color=fff`;
+            avatar.onerror = () => {
+                avatar.src = Utils.generateAvatar(employee.name);
             };
         }
 
-        const skillsContainer = document.getElementById('viewEmpSkills');
-        this.renderSkillsList(skillsContainer, employee.skills);
+        this.updateSkillsInModal(employee.skills);
+    }
+
+    updateSkillsInModal(skills) {
+        const container = document.getElementById('viewEmpSkills');
+        if (!container) return;
+
+        if (skills.length === 0) {
+            container.innerHTML = '<span style="color: #999;">No skills listed</span>';
+        } else {
+            container.innerHTML = skills.map(skill => 
+                `<span class="skill-badge">${skill}</span>`
+            ).join('');
+        }
     }
 
     populateAssignmentModal(employee) {
@@ -815,51 +725,69 @@ class UIManager {
         if (avatar) {
             avatar.src = employee.avatar;
             avatar.style.objectFit = 'cover';
-            avatar.onerror = function() {
-                this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name)}&background=random&color=fff`;
+            avatar.onerror = () => {
+                avatar.src = Utils.generateAvatar(employee.name);
             };
         }
         if (name) name.textContent = employee.name;
         if (role) role.textContent = employee.role;
 
-        const today = new Date().toISOString().split('T')[0];
-        const startDateInput = document.getElementById('assignStartDate');
-        if (startDateInput) startDateInput.value = today;
-
         const form = document.getElementById('assignEmployeeForm');
         if (form) {
             form.reset();
-            if (startDateInput) startDateInput.value = today;
+            const startDateInput = document.getElementById('assignStartDate');
+            if (startDateInput) startDateInput.value = Utils.formatDate();
         }
     }
 }
 
 // ============================================
-// EMPLOYEE APP
+// EMPLOYEE APP - OPTIMIZED
 // ============================================
-
 class EmployeeApp {
-    static MIN_HOURS = 1;
-    static MAX_HOURS = 40;
-
     constructor() {
         this.dataService = new DataService();
         this.uiManager = new UIManager(this.dataService);
-        this.debouncedSearch = debounce(() => this.filterEmployees(), 300);
         this.currentEmployeeId = null;
         this.allEmployees = [];
+        this.filters = {
+            search: '',
+            skill: '',
+            availability: ''
+        };
     }
 
     async init() {
         try {
+            await Promise.all([
+                this.loadEmployees(),
+                this.loadInitialData()
+            ]);
+            
             this.setupEventListeners();
-            await this.loadEmployees();
-            await this.loadSkillsFilter();
-            await updateUserNameDisplayEnhanced();
-            await this.loadProjectsForAssignment();
+            this.setupNavigation();
         } catch (error) {
-            console.error('Initialization error:', error);
+            console.error('[APP] Initialization error:', error);
             MessageManager.error('Failed to initialize application');
+        }
+    }
+
+    async loadInitialData() {
+        await Promise.all([
+            UserDisplay.update(),
+            this.loadSkillsFilter(),
+            this.loadProjectsForAssignment()
+        ]);
+    }
+
+    setupNavigation() {
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        const employeeNavLink = document.querySelector('a[href*="employee.html"]');
+        if (employeeNavLink) {
+            employeeNavLink.classList.add('active');
         }
     }
 
@@ -872,74 +800,53 @@ class EmployeeApp {
     setupLogoutListeners() {
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.openLogoutModal());
+            logoutBtn.addEventListener('click', () => ModalManager.show('logoutModal'));
         }
 
-        const cancelLogoutBtn = document.getElementById('cancelLogout');
-        const confirmLogoutBtn = document.getElementById('confirmLogout');
-        if (cancelLogoutBtn) {
-            cancelLogoutBtn.addEventListener('click', () => ModalManager.hide('logoutModal'));
-        }
-        if (confirmLogoutBtn) {
-            confirmLogoutBtn.addEventListener('click', () => this.handleLogout());
-        }
+        document.getElementById('cancelLogout')?.addEventListener('click', 
+            () => ModalManager.hide('logoutModal'));
+        document.getElementById('confirmLogout')?.addEventListener('click', 
+            () => this.handleLogout());
     }
 
     setupSearchAndFilters() {
         const empSearch = document.getElementById('employeeSearch');
-        if (empSearch) {
-            empSearch.addEventListener('input', () => this.debouncedSearch());
-        }
-
         const skillFilter = document.getElementById('skillFilter');
         const availFilter = document.getElementById('availabilityFilter');
 
-        if (skillFilter) {
-            skillFilter.addEventListener('change', () => this.filterEmployees());
-        }
-
-        if (availFilter) {
-            availFilter.addEventListener('change', () => this.filterEmployees());
-        }
+        const debouncedFilter = Utils.debounce(() => this.filterEmployees());
+        
+        if (empSearch) empSearch.addEventListener('input', debouncedFilter);
+        if (skillFilter) skillFilter.addEventListener('change', debouncedFilter);
+        if (availFilter) availFilter.addEventListener('change', debouncedFilter);
     }
 
     setupModalListeners() {
-        ['closeViewModal', 'closeProfileBtn'].forEach(id => {
-            const btn = document.getElementById(id);
-            if (btn) {
-                btn.addEventListener('click', () => ModalManager.hide('viewEmployeeModal'));
-            }
+        // View modal
+        document.getElementById('closeViewModal')?.addEventListener('click', 
+            () => ModalManager.hide('viewEmployeeModal'));
+        document.getElementById('closeProfileBtn')?.addEventListener('click', 
+            () => ModalManager.hide('viewEmployeeModal'));
+
+        // Assign modal
+        document.getElementById('closeAssignModal')?.addEventListener('click', 
+            () => ModalManager.hide('assignEmployeeModal'));
+        document.getElementById('cancelAssignBtn')?.addEventListener('click', 
+            () => ModalManager.hide('assignEmployeeModal'));
+        document.getElementById('submitAssignBtn')?.addEventListener('click', 
+            () => this.submitAssignment());
+
+        // Busy employee modal
+        document.getElementById('cancelBusyAssign')?.addEventListener('click', () => {
+            ModalManager.hide('busyEmployeeModal');
+            ModalManager.show('assignEmployeeModal');
+        });
+        document.getElementById('proceedBusyAssign')?.addEventListener('click', () => {
+            ModalManager.hide('busyEmployeeModal');
+            this.submitAssignment(true);
         });
 
-        ['closeAssignModal', 'cancelAssignBtn'].forEach(id => {
-            const btn = document.getElementById(id);
-            if (btn) {
-                btn.addEventListener('click', () => ModalManager.hide('assignEmployeeModal'));
-            }
-        });
-
-        const submitAssignBtn = document.getElementById('submitAssignBtn');
-        if (submitAssignBtn) {
-            submitAssignBtn.addEventListener('click', () => this.submitAssignment());
-        }
-
-        const cancelBusyBtn = document.getElementById('cancelBusyAssign');
-        const proceedBusyBtn = document.getElementById('proceedBusyAssign');
-
-        if (cancelBusyBtn) {
-            cancelBusyBtn.addEventListener('click', () => {
-                ModalManager.hide('busyEmployeeModal');
-                ModalManager.show('assignEmployeeModal');
-            });
-        }
-
-        if (proceedBusyBtn) {
-            proceedBusyBtn.addEventListener('click', () => {
-                ModalManager.hide('busyEmployeeModal');
-                this.submitAssignment(true);
-            });
-        }
-
+        // Modal overlay clicks
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -969,7 +876,7 @@ class EmployeeApp {
             const dropdown = document.getElementById('skillFilter');
             this.uiManager.populateSkillsDropdown(dropdown, skills);
         } catch (error) {
-            console.error('Error loading skills filter:', error);
+            console.error('[APP] Error loading skills filter:', error);
         }
     }
 
@@ -979,7 +886,7 @@ class EmployeeApp {
             const dropdown = document.getElementById('assignProjectSelect');
             this.uiManager.populateProjectsDropdown(dropdown, projects);
         } catch (error) {
-            console.error('Error loading projects:', error);
+            console.error('[APP] Error loading projects:', error);
             MessageManager.warning('Failed to load project list');
         }
     }
@@ -990,34 +897,29 @@ class EmployeeApp {
             const skillFilter = document.getElementById('skillFilter');
             const availFilter = document.getElementById('availabilityFilter');
 
-            const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
-            const selectedSkill = skillFilter ? skillFilter.value : '';
-            const selectedAvail = availFilter ? availFilter.value : '';
+            this.filters.search = searchInput?.value.toLowerCase().trim() || '';
+            this.filters.skill = skillFilter?.value || '';
+            this.filters.availability = availFilter?.value || '';
 
-            let filtered = [...this.allEmployees];
+            const filtered = this.allEmployees.filter(emp => {
+                const matchesSearch = !this.filters.search || 
+                    emp.name.toLowerCase().includes(this.filters.search) ||
+                    emp.role.toLowerCase().includes(this.filters.search) ||
+                    emp.department.toLowerCase().includes(this.filters.search) ||
+                    emp.skills.some(skill => skill.toLowerCase().includes(this.filters.search));
 
-            if (query) {
-                filtered = filtered.filter(emp =>
-                    emp.name.toLowerCase().includes(query) ||
-                    emp.role.toLowerCase().includes(query) ||
-                    emp.department.toLowerCase().includes(query) ||
-                    emp.skills.some(skill => skill.toLowerCase().includes(query))
-                );
-            }
+                const matchesSkill = !this.filters.skill || 
+                    emp.skills.includes(this.filters.skill);
 
-            if (selectedSkill) {
-                filtered = filtered.filter(emp =>
-                    emp.skills.includes(selectedSkill)
-                );
-            }
+                const matchesAvail = !this.filters.availability || 
+                    emp.availability === this.filters.availability;
 
-            if (selectedAvail) {
-                filtered = filtered.filter(emp => emp.availability === selectedAvail);
-            }
+                return matchesSearch && matchesSkill && matchesAvail;
+            });
 
             this.uiManager.renderEmployees(filtered);
         } catch (error) {
-            console.error('Error filtering employees:', error);
+            console.error('[APP] Error filtering employees:', error);
             MessageManager.error('Error applying filters');
         }
     }
@@ -1026,14 +928,13 @@ class EmployeeApp {
         try {
             ModalManager.showLoading();
             const employee = await this.dataService.getEmployeeById(id);
-            ModalManager.hideLoading();
-
             this.uiManager.populateEmployeeModal(employee);
             ModalManager.show('viewEmployeeModal');
         } catch (error) {
-            ModalManager.hideLoading();
             MessageManager.error(error.message || 'Failed to load employee details');
             console.error(error);
+        } finally {
+            ModalManager.hideLoading();
         }
     }
 
@@ -1041,15 +942,14 @@ class EmployeeApp {
         try {
             ModalManager.showLoading();
             const employee = await this.dataService.getEmployeeById(id);
-            ModalManager.hideLoading();
-
             this.currentEmployeeId = id;
             this.uiManager.populateAssignmentModal(employee);
             ModalManager.show('assignEmployeeModal');
         } catch (error) {
-            ModalManager.hideLoading();
             MessageManager.error(error.message || 'Failed to load employee details');
             console.error(error);
+        } finally {
+            ModalManager.hideLoading();
         }
     }
 
@@ -1059,15 +959,14 @@ class EmployeeApp {
             const hours = document.getElementById('assignHours')?.value;
             const startDate = document.getElementById('assignStartDate')?.value;
 
-            // Validation
             if (!projectId) {
                 MessageManager.warning('Please select a project');
                 return;
             }
 
             const hoursNum = parseInt(hours);
-            if (!hours || hoursNum < EmployeeApp.MIN_HOURS || hoursNum > EmployeeApp.MAX_HOURS) {
-                MessageManager.warning(`Please enter valid hours (${EmployeeApp.MIN_HOURS}-${EmployeeApp.MAX_HOURS})`);
+            if (!hours || hoursNum < CONFIG.MIN_ASSIGN_HOURS || hoursNum > CONFIG.MAX_ASSIGN_HOURS) {
+                MessageManager.warning(`Please enter valid hours (${CONFIG.MIN_ASSIGN_HOURS}-${CONFIG.MAX_ASSIGN_HOURS})`);
                 return;
             }
 
@@ -1078,13 +977,11 @@ class EmployeeApp {
 
             const employee = await this.dataService.getEmployeeById(this.currentEmployeeId);
 
-            // Check if employee is overloaded (unless forcing assignment)
             if (!forceAssign && (employee.availability === 'full' || employee.availability === 'over')) {
                 this.showBusyWarning(employee);
                 return;
             }
 
-            // Proceed with assignment
             await this.performAssignment(employee, projectId);
         } catch (error) {
             ModalManager.hideLoading();
@@ -1116,28 +1013,23 @@ class EmployeeApp {
                 employee.role
             );
 
-            ModalManager.hideLoading();
             MessageManager.success(`${employee.name} has been assigned to the project successfully!`);
-
-            // Reload employees to reflect changes
+            
+            // Reload employees
             await this.loadEmployees();
             this.currentEmployeeId = null;
         } catch (error) {
             throw error;
+        } finally {
+            ModalManager.hideLoading();
         }
     }
 
-    openLogoutModal() {
-        ModalManager.show('logoutModal');
-    }
-
-    async handleLogout() {
+    handleLogout() {
         ModalManager.hide('logoutModal');
         ModalManager.showLoading();
 
         setTimeout(() => {
-            ModalManager.hideLoading();
-            MessageManager.success('You have been logged out successfully.');
             localStorage.removeItem('loggedUser');
             window.location.href = '/login/HTML_Files/login.html';
         }, 1000);
@@ -1147,18 +1039,10 @@ class EmployeeApp {
 // ============================================
 // INITIALIZATION
 // ============================================
+let app;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Fix navigation highlight
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    
-    const employeeNavLink = document.querySelector('a[href*="employee.html"]');
-    if (employeeNavLink) {
-        employeeNavLink.classList.add('active');
-    }
-
-    window.app = new EmployeeApp();
-    window.app.init();
+    console.log('[INIT] Initializing Employee App...');
+    app = new EmployeeApp();
+    app.init();
 });

@@ -1,4 +1,4 @@
-// PROJECT MANAGER (PM) projecttrack.js 
+// PROJECT MANAGER (PM) projecttrack.js - OPTIMIZED
 import { supabase } from "../../supabaseClient.js";
 
 // ============================================
@@ -36,6 +36,13 @@ class ModalManager {
 // ============================================
 
 class MessageManager {
+    static iconMap = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+
     static show(message, type = 'info') {
         let container = document.getElementById('messageContainer');
         if (!container) {
@@ -46,45 +53,22 @@ class MessageManager {
 
         const messageBox = document.createElement('div');
         messageBox.className = `message-box ${type}`;
-
-        const iconMap = {
-            success: 'fa-check-circle',
-            error: 'fa-exclamation-circle',
-            warning: 'fa-exclamation-triangle',
-            info: 'fa-info-circle'
-        };
-
         messageBox.innerHTML = `
-            <i class="fas ${iconMap[type]}"></i>
+            <i class="fas ${this.iconMap[type]}"></i>
             <span>${message}</span>
             <button class="message-close"><i class="fas fa-times"></i></button>
         `;
 
-        const closeBtn = messageBox.querySelector('.message-close');
-        closeBtn.addEventListener('click', () => messageBox.remove());
-
+        messageBox.querySelector('.message-close').addEventListener('click', () => messageBox.remove());
         container.appendChild(messageBox);
 
-        setTimeout(() => {
-            messageBox.remove();
-        }, 5000);
+        setTimeout(() => messageBox.remove(), 5000);
     }
 
-    static success(message) {
-        this.show(message, 'success');
-    }
-
-    static error(message) {
-        this.show(message, 'error');
-    }
-
-    static warning(message) {
-        this.show(message, 'warning');
-    }
-
-    static info(message) {
-        this.show(message, 'info');
-    }
+    static success(message) { this.show(message, 'success'); }
+    static error(message) { this.show(message, 'error'); }
+    static warning(message) { this.show(message, 'warning'); }
+    static info(message) { this.show(message, 'info'); }
 }
 
 // ============================================
@@ -100,32 +84,30 @@ class ProjectTrackingService {
     async initialize() {
         const loggedUser = JSON.parse(localStorage.getItem('loggedUser') || '{}');
         
-        if (loggedUser.email) {
-            this.currentPMEmail = loggedUser.email;
-            
-            const { data: userData, error } = await supabase
-                .from('users')
-                .select('id, name, email')
-                .eq('email', this.currentPMEmail)
-                .eq('role', 'project_manager')
-                .single();
-
-            if (error) {
-                console.error('[PROJECT TRACKING] Error fetching PM user:', error);
-                throw error;
-            }
-
-            this.currentPMId = userData.id;
-            console.log('[PROJECT TRACKING] Initialized for PM:', userData);
-        } else {
+        if (!loggedUser.email) {
             throw new Error('No logged in user found');
         }
+
+        this.currentPMEmail = loggedUser.email;
+        
+        const { data: userData, error } = await supabase
+            .from('users')
+            .select('id, name, email')
+            .eq('email', this.currentPMEmail)
+            .eq('role', 'project_manager')
+            .single();
+
+        if (error) {
+            console.error('[PROJECT TRACKING] Error fetching PM user:', error);
+            throw error;
+        }
+
+        this.currentPMId = userData.id;
+        console.log('[PROJECT TRACKING] Initialized for PM:', userData);
     }
 
     async getActiveProjects() {
         try {
-            console.log('[PROJECT TRACKING] Fetching active projects for PM:', this.currentPMId);
-
             const { data: projects, error } = await supabase
                 .from('projects')
                 .select(`
@@ -144,16 +126,12 @@ class ProjectTrackingService {
 
             if (error) throw error;
 
-            // Get team members for each project
             const projectsWithTeams = await Promise.all(
-                projects.map(async (project) => {
-                    const teamMembers = await this.getProjectTeamMembers(project.id);
-                    return {
-                        ...project,
-                        teamMembers,
-                        teamSize: teamMembers.length
-                    };
-                })
+                projects.map(async (project) => ({
+                    ...project,
+                    teamMembers: await this.getProjectTeamMembers(project.id),
+                    teamSize: (await this.getProjectTeamMembers(project.id)).length
+                }))
             );
 
             console.log('[PROJECT TRACKING] Active projects fetched:', projectsWithTeams.length);
@@ -166,8 +144,6 @@ class ProjectTrackingService {
 
     async getProjectHistory() {
         try {
-            console.log('[PROJECT TRACKING] Fetching project history for PM:', this.currentPMId);
-
             const { data: projects, error } = await supabase
                 .from('projects')
                 .select(`
@@ -185,8 +161,6 @@ class ProjectTrackingService {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-
-            console.log('[PROJECT TRACKING] History projects fetched:', projects.length);
             return projects || [];
         } catch (error) {
             console.error('[PROJECT TRACKING] Error fetching project history:', error);
@@ -230,143 +204,94 @@ class ProjectTrackingService {
         }
     }
 
+    async updateUserAvailability(userId, hoursToRestore) {
+        const { data: userDetail, error: fetchError } = await supabase
+            .from('user_details')
+            .select('total_available_hours')
+            .eq('user_id', userId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        const currentAvailable = userDetail?.total_available_hours || 0;
+        const newAvailable = Math.min(currentAvailable + hoursToRestore, 40);
+
+        const { error: statusError } = await supabase
+            .from('user_details')
+            .update({ 
+                status: 'Available',
+                total_available_hours: newAvailable
+            })
+            .eq('user_id', userId);
+
+        if (statusError) throw statusError;
+
+        console.log(`[PROJECT TRACKING] User ${userId} updated: ${newAvailable}h available`);
+        return newAvailable;
+    }
+
     async removeTeamMember(projectId, userId) {
         try {
-            console.log('[PROJECT TRACKING] ===== REMOVING TEAM MEMBER =====');
-            console.log('[PROJECT TRACKING] Project ID:', projectId, 'User ID:', userId);
+            console.log('[PROJECT TRACKING] Removing team member - Project:', projectId, 'User:', userId);
 
-            // FIXED: Get ALL assignments for this user and project (may be multiple) - NO .single()!
             const { data: assignments, error: fetchError } = await supabase
                 .from('project_assignments')
                 .select('assigned_hours')
                 .eq('project_id', projectId)
                 .eq('user_id', userId);
 
-            if (fetchError) {
-                console.error('[PROJECT TRACKING] Error fetching assignments:', fetchError);
-                throw fetchError;
-            }
+            if (fetchError) throw fetchError;
 
-            // Calculate total hours to restore (in case there are multiple records)
             const totalAssignedHours = assignments?.reduce((sum, a) => sum + (a.assigned_hours || 0), 0) || 40;
-            console.log(`[PROJECT TRACKING] Found ${assignments?.length || 0} assignment(s), total hours to restore: ${totalAssignedHours}h`);
 
-            // Step 1: Delete ALL PM allocations for this user on this project
-            console.log('[PROJECT TRACKING] Step 1: Deleting PM allocations...');
-            const { error: deleteAllocError } = await supabase
+            // Delete PM allocations
+            await supabase
                 .from('employee_assigned')
                 .delete()
                 .eq('project_id', projectId)
                 .eq('user_id', userId);
 
-            if (deleteAllocError) {
-                console.error('[PROJECT TRACKING] Error deleting PM allocations:', deleteAllocError);
-                // Continue even if no allocations exist
-            } else {
-                console.log('[PROJECT TRACKING] Deleted all PM allocations for this user');
-            }
-
-            // Step 2: Update ALL assignment statuses to removed
-            console.log('[PROJECT TRACKING] Step 2: Updating assignment status...');
+            // Update assignment status
             const { error: updateError } = await supabase
                 .from('project_assignments')
                 .update({ status: 'removed' })
                 .eq('project_id', projectId)
                 .eq('user_id', userId);
 
-            if (updateError) {
-                console.error('[PROJECT TRACKING] Error updating assignments:', updateError);
-                throw updateError;
-            }
+            if (updateError) throw updateError;
 
-            console.log('[PROJECT TRACKING] All assignments updated to "removed"');
+            // Restore user hours
+            await this.updateUserAvailability(userId, totalAssignedHours);
 
-            // Step 3: Get current available hours
-            console.log('[PROJECT TRACKING] Step 3: Restoring user hours...');
-            const { data: userDetail, error: detailError } = await supabase
-                .from('user_details')
-                .select('total_available_hours')
-                .eq('user_id', userId)
-                .single();
-
-            if (detailError) {
-                console.error('[PROJECT TRACKING] Error fetching user details:', detailError);
-                throw detailError;
-            }
-
-            const currentAvailable = userDetail?.total_available_hours || 0;
-            const newAvailable = Math.min(currentAvailable + totalAssignedHours, 40);
-
-            console.log(`[PROJECT TRACKING] Current: ${currentAvailable}h, Restoring: ${totalAssignedHours}h, New: ${newAvailable}h`);
-
-            // Step 4: Update user_details: restore hours and set to Available
-            const { error: statusError } = await supabase
-                .from('user_details')
-                .update({ 
-                    status: 'Available',
-                    total_available_hours: newAvailable
-                })
-                .eq('user_id', userId);
-
-            if (statusError) {
-                console.error('[PROJECT TRACKING] Error updating user status:', statusError);
-                throw statusError;
-            }
-
-            console.log('[PROJECT TRACKING] ===== REMOVE TEAM MEMBER SUCCESS =====');
-            console.log(`[PROJECT TRACKING] Restored ${totalAssignedHours}h. User now has ${newAvailable}h available`);
+            console.log('[PROJECT TRACKING] Team member removed successfully');
             return { success: true };
         } catch (error) {
-            console.error('[PROJECT TRACKING] ===== REMOVE TEAM MEMBER FAILED =====');
-            console.error('[PROJECT TRACKING] Error:', error);
+            console.error('[PROJECT TRACKING] Error removing team member:', error);
             throw error;
         }
     }
 
     async completeProject(projectId) {
         try {
-            console.log('[PROJECT TRACKING] ===== STARTING COMPLETE PROJECT =====');
-            console.log('[PROJECT TRACKING] Project ID:', projectId);
+            console.log('[PROJECT TRACKING] Completing project:', projectId);
 
-            // Get ALL assignments for this project with assigned hours
-            console.log('[PROJECT TRACKING] Step 1: Fetching assignments...');
             const { data: assignments, error: assignError } = await supabase
                 .from('project_assignments')
                 .select('user_id, status, assigned_hours')
                 .eq('project_id', projectId);
 
-            if (assignError) {
-                console.error('[PROJECT TRACKING] Error fetching assignments:', assignError);
-                throw assignError;
-            }
+            if (assignError) throw assignError;
 
-            console.log('[PROJECT TRACKING] Step 1 Complete. Assignments:', assignments);
-
-            // Filter for assigned users in JavaScript
             const assignedUsers = assignments?.filter(a => a.status === 'assigned') || [];
-            console.log('[PROJECT TRACKING] Assigned users:', assignedUsers);
 
-            // Delete ALL PM allocations for this project
-            console.log('[PROJECT TRACKING] Step 1.5: Deleting PM allocations...');
-            const { error: deleteAllocError } = await supabase
+            // Delete PM allocations
+            await supabase
                 .from('employee_assigned')
                 .delete()
                 .eq('project_id', projectId);
 
-            if (deleteAllocError) {
-                console.error('[PROJECT TRACKING] Error deleting PM allocations:', deleteAllocError);
-                // Continue even if no allocations exist
-            } else {
-                console.log('[PROJECT TRACKING] Deleted all PM allocations for this project');
-            }
-
-            // Get today's date in YYYY-MM-DD format
-            const today = new Date();
-            const endDate = today.toISOString().split('T')[0];
-            console.log('[PROJECT TRACKING] Setting end_date to:', endDate);
-
-            // Update project status to completed AND set end_date
-            console.log('[PROJECT TRACKING] Step 2: Updating project status and end_date...');
+            // Update project status and end date
+            const endDate = new Date().toISOString().split('T')[0];
             const { error: projectError } = await supabase
                 .from('projects')
                 .update({ 
@@ -375,75 +300,30 @@ class ProjectTrackingService {
                 })
                 .eq('id', projectId);
 
-            if (projectError) {
-                console.error('[PROJECT TRACKING] Error updating project:', projectError);
-                throw projectError;
-            }
+            if (projectError) throw projectError;
 
-            console.log('[PROJECT TRACKING] Step 2 Complete. Project status and end_date updated');
-
-            // Update assignment status
-            console.log('[PROJECT TRACKING] Step 3: Updating assignments...');
+            // Update assignments
             const { error: updateAssignError } = await supabase
                 .from('project_assignments')
                 .update({ status: 'completed' })
                 .eq('project_id', projectId)
                 .eq('status', 'assigned');
 
-            if (updateAssignError) {
-                console.error('[PROJECT TRACKING] Error updating assignments:', updateAssignError);
-                throw updateAssignError;
-            }
+            if (updateAssignError) throw updateAssignError;
 
-            console.log('[PROJECT TRACKING] Step 3 Complete. Assignments updated');
-
-            // Update user statuses AND restore hours
-            if (assignedUsers && assignedUsers.length > 0) {
-                console.log('[PROJECT TRACKING] Step 4: Updating user availability and restoring hours...');
-                
-                for (const assignment of assignedUsers) {
-                    const userId = assignment.user_id;
-                    const hoursToRestore = assignment.assigned_hours || 40;
-                    
-                    console.log(`[PROJECT TRACKING] Restoring ${hoursToRestore}h for user:`, userId);
-                    
-                    // Get current available hours
-                    const { data: userDetail, error: fetchError } = await supabase
-                        .from('user_details')
-                        .select('total_available_hours')
-                        .eq('user_id', userId)
-                        .single();
-
-                    if (fetchError) {
-                        console.error(`[PROJECT TRACKING] Error fetching user ${userId}:`, fetchError);
-                        continue;
-                    }
-
-                    const currentAvailable = userDetail?.total_available_hours || 0;
-                    const newAvailable = Math.min(currentAvailable + hoursToRestore, 40);
-
-                    // Update status and hours
-                    const { error: statusError } = await supabase
-                        .from('user_details')
-                        .update({ 
-                            status: 'Available',
-                            total_available_hours: newAvailable
-                        })
-                        .eq('user_id', userId);
-
-                    if (statusError) {
-                        console.error(`[PROJECT TRACKING] Error updating user ${userId}:`, statusError);
-                    } else {
-                        console.log(`[PROJECT TRACKING] User ${userId} updated: ${newAvailable}h available`);
-                    }
+            // Restore user hours
+            for (const assignment of assignedUsers) {
+                try {
+                    await this.updateUserAvailability(assignment.user_id, assignment.assigned_hours || 40);
+                } catch (error) {
+                    console.error(`[PROJECT TRACKING] Error updating user ${assignment.user_id}:`, error);
                 }
             }
 
-            console.log('[PROJECT TRACKING] ===== COMPLETE PROJECT SUCCESS =====');
+            console.log('[PROJECT TRACKING] Project completed successfully');
             return { success: true };
         } catch (error) {
-            console.error('[PROJECT TRACKING] ===== COMPLETE PROJECT FAILED =====');
-            console.error('[PROJECT TRACKING] Error:', error);
+            console.error('[PROJECT TRACKING] Error completing project:', error);
             throw error;
         }
     }
@@ -452,101 +332,44 @@ class ProjectTrackingService {
         try {
             console.log('[PROJECT TRACKING] Dropping project:', projectId);
 
-            // Get ALL assignments for this project with assigned hours
             const { data: assignments, error: assignError } = await supabase
                 .from('project_assignments')
                 .select('user_id, status, assigned_hours')
                 .eq('project_id', projectId);
 
-            if (assignError) {
-                console.error('[PROJECT TRACKING] Error fetching assignments:', assignError);
-                throw assignError;
-            }
+            if (assignError) throw assignError;
 
-            // Filter for assigned users in JavaScript
             const assignedUsers = assignments?.filter(a => a.status === 'assigned') || [];
-            console.log('[PROJECT TRACKING] Found assigned users:', assignedUsers);
 
-            // Delete ALL PM allocations for this project
-            console.log('[PROJECT TRACKING] Deleting PM allocations...');
-            const { error: deleteAllocError } = await supabase
+            // Delete PM allocations
+            await supabase
                 .from('employee_assigned')
                 .delete()
                 .eq('project_id', projectId);
 
-            if (deleteAllocError) {
-                console.error('[PROJECT TRACKING] Error deleting PM allocations:', deleteAllocError);
-                // Continue even if no allocations exist
-            } else {
-                console.log('[PROJECT TRACKING] Deleted all PM allocations for this project');
-            }
-
-            // Update project status to cancelled
+            // Update project status
             const { error: projectError } = await supabase
                 .from('projects')
                 .update({ status: 'cancelled' })
                 .eq('id', projectId);
 
-            if (projectError) {
-                console.error('[PROJECT TRACKING] Error updating project status:', projectError);
-                throw projectError;
-            }
+            if (projectError) throw projectError;
 
-            console.log('[PROJECT TRACKING] Project status updated to cancelled');
-
-            // Update assignment status to removed
+            // Update assignments
             const { error: updateAssignError } = await supabase
                 .from('project_assignments')
                 .update({ status: 'removed' })
                 .eq('project_id', projectId)
                 .eq('status', 'assigned');
 
-            if (updateAssignError) {
-                console.error('[PROJECT TRACKING] Error updating assignments:', updateAssignError);
-                throw updateAssignError;
-            }
+            if (updateAssignError) throw updateAssignError;
 
-            console.log('[PROJECT TRACKING] Assignment statuses updated to removed');
-
-            // Update user_details status to Available AND restore hours for assigned users
-            if (assignedUsers && assignedUsers.length > 0) {
-                console.log('[PROJECT TRACKING] Updating availability and restoring hours for users');
-                
-                for (const assignment of assignedUsers) {
-                    const userId = assignment.user_id;
-                    const hoursToRestore = assignment.assigned_hours || 40;
-                    
-                    console.log(`[PROJECT TRACKING] Restoring ${hoursToRestore}h for user:`, userId);
-
-                    // Get current available hours
-                    const { data: userDetail, error: fetchError } = await supabase
-                        .from('user_details')
-                        .select('total_available_hours')
-                        .eq('user_id', userId)
-                        .single();
-
-                    if (fetchError) {
-                        console.error(`[PROJECT TRACKING] Error fetching user ${userId}:`, fetchError);
-                        continue;
-                    }
-
-                    const currentAvailable = userDetail?.total_available_hours || 0;
-                    const newAvailable = Math.min(currentAvailable + hoursToRestore, 40);
-
-                    // Update status and hours
-                    const { error: statusError } = await supabase
-                        .from('user_details')
-                        .update({ 
-                            status: 'Available',
-                            total_available_hours: newAvailable
-                        })
-                        .eq('user_id', userId);
-
-                    if (statusError) {
-                        console.error(`[PROJECT TRACKING] Error updating user ${userId}:`, statusError);
-                    } else {
-                        console.log(`[PROJECT TRACKING] Successfully updated user ${userId}: ${newAvailable}h available`);
-                    }
+            // Restore user hours
+            for (const assignment of assignedUsers) {
+                try {
+                    await this.updateUserAvailability(assignment.user_id, assignment.assigned_hours || 40);
+                } catch (error) {
+                    console.error(`[PROJECT TRACKING] Error updating user ${assignment.user_id}:`, error);
                 }
             }
 
@@ -560,68 +383,44 @@ class ProjectTrackingService {
 
     async getStats() {
         try {
-            const { count: activeCount, error: activeError } = await supabase
-                .from('projects')
-                .select('*', { count: 'exact', head: true })
-                .eq('created_by', this.currentPMId)
-                .in('status', ['pending', 'ongoing', 'active']);
+            const [activeCount, completedCount, projects, highCount] = await Promise.all([
+                supabase.from('projects').select('*', { count: 'exact', head: true })
+                    .eq('created_by', this.currentPMId)
+                    .in('status', ['pending', 'ongoing', 'active']),
+                supabase.from('projects').select('*', { count: 'exact', head: true })
+                    .eq('created_by', this.currentPMId)
+                    .eq('status', 'completed'),
+                supabase.from('projects').select('id')
+                    .eq('created_by', this.currentPMId)
+                    .in('status', ['pending', 'ongoing', 'active']),
+                supabase.from('projects').select('*', { count: 'exact', head: true })
+                    .eq('created_by', this.currentPMId)
+                    .eq('priority', 'high')
+                    .in('status', ['pending', 'ongoing', 'active'])
+            ]);
 
-            if (activeError) throw activeError;
-
-            const { count: completedCount, error: completedError } = await supabase
-                .from('projects')
-                .select('*', { count: 'exact', head: true })
-                .eq('created_by', this.currentPMId)
-                .eq('status', 'completed');
-
-            if (completedError) throw completedError;
-
-            const { data: projects, error: projError } = await supabase
-                .from('projects')
-                .select('id')
-                .eq('created_by', this.currentPMId)
-                .in('status', ['pending', 'ongoing', 'active']);
-
-            if (projError) throw projError;
-
-            const projectIds = projects?.map(p => p.id) || [];
-
+            const projectIds = projects.data?.map(p => p.id) || [];
             let uniqueMembers = [];
+
             if (projectIds.length > 0) {
-                const { data: assignments, error: assignError } = await supabase
+                const { data: assignments } = await supabase
                     .from('project_assignments')
                     .select('user_id')
                     .in('project_id', projectIds)
                     .eq('status', 'assigned');
 
-                if (assignError) throw assignError;
-
                 uniqueMembers = [...new Set(assignments?.map(a => a.user_id) || [])];
             }
 
-            const { count: highCount, error: highError } = await supabase
-                .from('projects')
-                .select('*', { count: 'exact', head: true })
-                .eq('created_by', this.currentPMId)
-                .eq('priority', 'high')
-                .in('status', ['pending', 'ongoing', 'active']);
-
-            if (highError) throw highError;
-
             return {
-                activeProjects: activeCount || 0,
-                completedProjects: completedCount || 0,
+                activeProjects: activeCount.count || 0,
+                completedProjects: completedCount.count || 0,
                 totalMembers: uniqueMembers.length,
-                highPriority: highCount || 0
+                highPriority: highCount.count || 0
             };
         } catch (error) {
             console.error('[PROJECT TRACKING] Error fetching stats:', error);
-            return {
-                activeProjects: 0,
-                completedProjects: 0,
-                totalMembers: 0,
-                highPriority: 0
-            };
+            return { activeProjects: 0, completedProjects: 0, totalMembers: 0, highPriority: 0 };
         }
     }
 }
@@ -642,92 +441,40 @@ class ProjectTrackingApp {
     async init() {
         try {
             ModalManager.showLoading();
-            
             await this.dataService.initialize();
-
             this.setupEventListeners();
             await this.loadDashboard();
-            
             ModalManager.hideLoading();
         } catch (error) {
             ModalManager.hideLoading();
             console.error('[PROJECT TRACKING APP] Initialization error:', error);
             MessageManager.error('Failed to initialize. Please login again.');
-            setTimeout(() => {
-                window.location.href = "/login/HTML_Files/login.html";
-            }, 2000);
+            setTimeout(() => window.location.href = "/login/HTML_Files/login.html", 2000);
         }
     }
 
     setupEventListeners() {
-        // Logout
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.openLogoutModal());
-        }
+        const handlers = {
+            logoutBtn: () => this.openLogoutModal(),
+            cancelLogout: () => ModalManager.hide('logoutModal'),
+            confirmLogout: () => this.handleLogout(),
+            historyToggleBtn: () => this.toggleHistory(),
+            closeRemoveModal: () => ModalManager.hide('removeEmployeeModal'),
+            cancelRemove: () => ModalManager.hide('removeEmployeeModal'),
+            confirmRemove: () => this.confirmRemoveEmployee(),
+            closeCompleteModal: () => ModalManager.hide('completeProjectModal'),
+            cancelComplete: () => ModalManager.hide('completeProjectModal'),
+            confirmComplete: () => this.confirmCompleteProject(),
+            closeDropModal: () => ModalManager.hide('dropProjectModal'),
+            cancelDrop: () => ModalManager.hide('dropProjectModal'),
+            confirmDrop: () => this.confirmDropProject()
+        };
 
-        const cancelLogout = document.getElementById('cancelLogout');
-        const confirmLogout = document.getElementById('confirmLogout');
-        
-        if (cancelLogout) {
-            cancelLogout.addEventListener('click', () => ModalManager.hide('logoutModal'));
-        }
-        if (confirmLogout) {
-            confirmLogout.addEventListener('click', () => this.handleLogout());
-        }
+        Object.entries(handlers).forEach(([id, handler]) => {
+            const element = document.getElementById(id);
+            if (element) element.addEventListener('click', handler);
+        });
 
-        // History toggle
-        const historyToggleBtn = document.getElementById('historyToggleBtn');
-        if (historyToggleBtn) {
-            historyToggleBtn.addEventListener('click', () => this.toggleHistory());
-        }
-
-        // Remove employee modal
-        const closeRemoveModal = document.getElementById('closeRemoveModal');
-        const cancelRemove = document.getElementById('cancelRemove');
-        const confirmRemove = document.getElementById('confirmRemove');
-
-        if (closeRemoveModal) {
-            closeRemoveModal.addEventListener('click', () => ModalManager.hide('removeEmployeeModal'));
-        }
-        if (cancelRemove) {
-            cancelRemove.addEventListener('click', () => ModalManager.hide('removeEmployeeModal'));
-        }
-        if (confirmRemove) {
-            confirmRemove.addEventListener('click', () => this.confirmRemoveEmployee());
-        }
-
-        // Complete project modal
-        const closeCompleteModal = document.getElementById('closeCompleteModal');
-        const cancelComplete = document.getElementById('cancelComplete');
-        const confirmComplete = document.getElementById('confirmComplete');
-
-        if (closeCompleteModal) {
-            closeCompleteModal.addEventListener('click', () => ModalManager.hide('completeProjectModal'));
-        }
-        if (cancelComplete) {
-            cancelComplete.addEventListener('click', () => ModalManager.hide('completeProjectModal'));
-        }
-        if (confirmComplete) {
-            confirmComplete.addEventListener('click', () => this.confirmCompleteProject());
-        }
-
-        // Drop project modal
-        const closeDropModal = document.getElementById('closeDropModal');
-        const cancelDrop = document.getElementById('cancelDrop');
-        const confirmDrop = document.getElementById('confirmDrop');
-
-        if (closeDropModal) {
-            closeDropModal.addEventListener('click', () => ModalManager.hide('dropProjectModal'));
-        }
-        if (cancelDrop) {
-            cancelDrop.addEventListener('click', () => ModalManager.hide('dropProjectModal'));
-        }
-        if (confirmDrop) {
-            confirmDrop.addEventListener('click', () => this.confirmDropProject());
-        }
-
-        // Close modals on overlay click
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -740,17 +487,11 @@ class ProjectTrackingApp {
 
     async loadDashboard() {
         try {
-            // Load stats
             const stats = await this.dataService.getStats();
             this.updateStats(stats);
-
-            // Load active projects
             this.activeProjects = await this.dataService.getActiveProjects();
             this.renderActiveProjects();
-
-            // Load project history
             this.projectHistory = await this.dataService.getProjectHistory();
-
         } catch (error) {
             console.error('[PROJECT TRACKING APP] Error loading dashboard:', error);
             MessageManager.error('Failed to load dashboard data');
@@ -758,17 +499,17 @@ class ProjectTrackingApp {
     }
 
     updateStats(stats) {
-        const elements = {
-            activeProjectsCount: document.getElementById('activeProjectsCount'),
-            completedProjectsCount: document.getElementById('completedProjectsCount'),
-            totalMembersCount: document.getElementById('totalMembersCount'),
-            highPriorityCount: document.getElementById('highPriorityCount')
+        const statsMap = {
+            activeProjectsCount: stats.activeProjects,
+            completedProjectsCount: stats.completedProjects,
+            totalMembersCount: stats.totalMembers,
+            highPriorityCount: stats.highPriority
         };
 
-        if (elements.activeProjectsCount) elements.activeProjectsCount.textContent = stats.activeProjects;
-        if (elements.completedProjectsCount) elements.completedProjectsCount.textContent = stats.completedProjects;
-        if (elements.totalMembersCount) elements.totalMembersCount.textContent = stats.totalMembers;
-        if (elements.highPriorityCount) elements.highPriorityCount.textContent = stats.highPriority;
+        Object.entries(statsMap).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        });
     }
 
     renderActiveProjects() {
@@ -786,27 +527,21 @@ class ProjectTrackingApp {
         }
 
         container.innerHTML = '';
-
         this.activeProjects.forEach(project => {
-            const projectCard = this.createProjectCard(project);
-            container.appendChild(projectCard);
+            container.appendChild(this.createProjectCard(project));
         });
     }
 
     createProjectCard(project) {
         const card = document.createElement('div');
         card.className = 'project-card';
-
-        const priorityClass = `priority-${project.priority}`;
-        const statusClass = `status-${project.status}`;
-
         card.innerHTML = `
             <div class="project-header">
                 <div class="project-title-section">
                     <div class="project-title-row">
                         <h3>${project.name}</h3>
-                        <span class="badge ${priorityClass}">${project.priority}</span>
-                        <span class="badge ${statusClass}">${project.status}</span>
+                        <span class="badge priority-${project.priority}">${project.priority}</span>
+                        <span class="badge status-${project.status}">${project.status}</span>
                     </div>
                     <p class="project-description">${project.description || 'No description'}</p>
                     <div class="project-meta">
@@ -832,14 +567,11 @@ class ProjectTrackingApp {
             </div>
         `;
 
-        // Add event listeners
-        const completeBtn = card.querySelector('.btn-complete');
-        const dropBtn = card.querySelector('.btn-drop');
-        const toggleBtn = card.querySelector('.btn-toggle');
-
-        completeBtn.addEventListener('click', () => this.openCompleteModal(project));
-        dropBtn.addEventListener('click', () => this.openDropModal(project));
-        toggleBtn.addEventListener('click', (e) => this.toggleTeamMembers(e.target.closest('.btn-toggle'), project.id));
+        card.querySelector('.btn-complete').addEventListener('click', () => this.openCompleteModal(project));
+        card.querySelector('.btn-drop').addEventListener('click', () => this.openDropModal(project));
+        card.querySelector('.btn-toggle').addEventListener('click', (e) => 
+            this.toggleTeamMembers(e.target.closest('.btn-toggle'), project.id)
+        );
 
         return card;
     }
@@ -902,22 +634,14 @@ class ProjectTrackingApp {
             return;
         }
 
-        container.innerHTML = '';
-
-        this.projectHistory.forEach(project => {
-            const card = document.createElement('div');
-            card.className = 'project-card';
-
-            const priorityClass = `priority-${project.priority}`;
-            const statusClass = `status-${project.status}`;
-
-            card.innerHTML = `
+        container.innerHTML = this.projectHistory.map(project => `
+            <div class="project-card">
                 <div class="project-header">
                     <div class="project-title-section">
                         <div class="project-title-row">
                             <h3>${project.name}</h3>
-                            <span class="badge ${priorityClass}">${project.priority}</span>
-                            <span class="badge ${statusClass}">${project.status}</span>
+                            <span class="badge priority-${project.priority}">${project.priority}</span>
+                            <span class="badge status-${project.status}">${project.status}</span>
                         </div>
                         <p class="project-description">${project.description || 'No description'}</p>
                         <div class="project-meta">
@@ -926,10 +650,8 @@ class ProjectTrackingApp {
                         </div>
                     </div>
                 </div>
-            `;
-
-            container.appendChild(card);
-        });
+            </div>
+        `).join('');
     }
 
     openCompleteModal(project) {
@@ -945,54 +667,31 @@ class ProjectTrackingApp {
     }
 
     async confirmCompleteProject() {
-    if (!this.selectedProject) {
-        console.error('[PROJECT TRACKING] No project selected');
-        MessageManager.error('No project selected');
-        return;
-    }
+        if (!this.selectedProject) return;
 
-    try {
-        console.log('[PROJECT TRACKING] Starting complete project for:', this.selectedProject.id);
-        
-        ModalManager.hide('completeProjectModal');
-        ModalManager.showLoading();
+        try {
+            ModalManager.hide('completeProjectModal');
+            ModalManager.showLoading();
 
-        const result = await this.dataService.completeProject(this.selectedProject.id);
-        
-        console.log('[PROJECT TRACKING] Complete project result:', result);
-
-        if (result.success) {
-            // Reload all data
+            await this.dataService.completeProject(this.selectedProject.id);
             await this.loadDashboard();
             
-            // FORCE show history section and refresh it
             const historySection = document.getElementById('projectHistorySection');
             const toggleBtn = document.getElementById('historyToggleBtn');
             
             if (historySection) {
                 historySection.style.display = 'block';
-                if (toggleBtn) {
-                    toggleBtn.classList.add('expanded');
-                }
-                // Force refresh history
+                toggleBtn?.classList.add('expanded');
                 this.renderProjectHistory();
             }
             
             ModalManager.hideLoading();
             MessageManager.success('Project completed successfully!');
-        } else {
-            throw new Error('Complete project returned unsuccessful result');
+        } catch (error) {
+            ModalManager.hideLoading();
+            MessageManager.error('Failed to complete project: ' + (error.message || 'Unknown error'));
         }
-        
-    } catch (error) {
-        ModalManager.hideLoading();
-        console.error('[PROJECT TRACKING] Error completing project:', error);
-        console.error('[PROJECT TRACKING] Error stack:', error.stack);
-        MessageManager.error('Failed to complete project: ' + (error.message || 'Unknown error'));
     }
-}
-
-        
 
     async confirmDropProject() {
         if (!this.selectedProject) return;
@@ -1002,29 +701,21 @@ class ProjectTrackingApp {
             ModalManager.showLoading();
 
             await this.dataService.dropProject(this.selectedProject.id);
-
-            // Reload all data
             await this.loadDashboard();
             
-            // FORCE show history section and refresh it
             const historySection = document.getElementById('projectHistorySection');
             const toggleBtn = document.getElementById('historyToggleBtn');
             
             if (historySection) {
                 historySection.style.display = 'block';
-                if (toggleBtn) {
-                    toggleBtn.classList.add('expanded');
-                }
-                // Force refresh history
+                toggleBtn?.classList.add('expanded');
                 this.renderProjectHistory();
             }
             
             ModalManager.hideLoading();
             MessageManager.success('Project dropped successfully!');
-            
         } catch (error) {
             ModalManager.hideLoading();
-            console.error('Error dropping project:', error);
             MessageManager.error('Failed to drop project: ' + error.message);
         }
     }
@@ -1037,7 +728,6 @@ class ProjectTrackingApp {
             ModalManager.showLoading();
 
             await this.dataService.removeTeamMember(this.selectedProject.id, this.selectedEmployee.userId);
-
             await this.loadDashboard();
             
             ModalManager.hideLoading();
@@ -1057,14 +747,9 @@ class ProjectTrackingApp {
         sessionStorage.clear();
         ModalManager.hide('logoutModal');
         ModalManager.showLoading();
-        
-        setTimeout(() => {
-            window.location.href = "/login/HTML_Files/login.html";
-        }, 500);
+        setTimeout(() => window.location.href = "/login/HTML_Files/login.html", 500);
     }
 }
-
-
 
 // ============================================
 // INITIALIZATION
@@ -1076,24 +761,23 @@ document.addEventListener('DOMContentLoaded', () => {
     app = new ProjectTrackingApp();
     app.init();
 
-    // Delegate event listener for remove buttons
     document.addEventListener('click', (e) => {
-        if (e.target.closest('.btn-remove')) {
-            const btn = e.target.closest('.btn-remove');
-            const projectId = parseInt(btn.dataset.projectId);
-            const userId = parseInt(btn.dataset.userId);
-            const memberName = btn.dataset.memberName;
+        const btn = e.target.closest('.btn-remove');
+        if (!btn) return;
 
-            const project = app.activeProjects.find(p => p.id === projectId);
-            const employee = project?.teamMembers.find(m => m.userId === userId);
+        const projectId = parseInt(btn.dataset.projectId);
+        const userId = parseInt(btn.dataset.userId);
+        const memberName = btn.dataset.memberName;
 
-            if (project && employee) {
-                app.selectedProject = project;
-                app.selectedEmployee = employee;
-                document.getElementById('removeEmployeeName').textContent = memberName;
-                document.getElementById('removeProjectName').textContent = project.name;
-                ModalManager.show('removeEmployeeModal');
-            }
+        const project = app.activeProjects.find(p => p.id === projectId);
+        const employee = project?.teamMembers.find(m => m.userId === userId);
+
+        if (project && employee) {
+            app.selectedProject = project;
+            app.selectedEmployee = employee;
+            document.getElementById('removeEmployeeName').textContent = memberName;
+            document.getElementById('removeProjectName').textContent = project.name;
+            ModalManager.show('removeEmployeeModal');
         }
     });
 });

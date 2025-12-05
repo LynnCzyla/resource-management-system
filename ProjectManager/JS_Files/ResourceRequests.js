@@ -1,4 +1,4 @@
-// PROJECT MANAGER (PM) Resource Requests.js
+// PROJECT MANAGER (PM) Resource Requests.js - OPTIMIZED
 import { supabase } from "../../supabaseClient.js";
 
 // ============================================
@@ -9,20 +9,13 @@ async function updateUserNameDisplayEnhanced() {
     const userNameElement = document.getElementById('userName');
     const userAvatarElement = document.querySelector('.user-avatar');
     
-    if (!userNameElement) {
-        console.warn('[USER DISPLAY] userName element not found');
-        return;
-    }
+    if (!userNameElement) return;
 
     try {
         const loggedUser = JSON.parse(localStorage.getItem('loggedUser') || '{}');
-        let displayName = '';
+        let displayName = loggedUser.name || '';
         
-        if (loggedUser.name) {
-            displayName = loggedUser.name;
-            userNameElement.textContent = displayName;
-            console.log('[USER DISPLAY] User name updated to:', displayName);
-        } else if (loggedUser.email) {
+        if (!displayName && loggedUser.email) {
             try {
                 const { data: userData, error } = await supabase
                     .from('users')
@@ -30,29 +23,23 @@ async function updateUserNameDisplayEnhanced() {
                     .eq('email', loggedUser.email)
                     .single();
                 
-                if (!error && userData && userData.name) {
+                if (!error && userData?.name) {
                     displayName = userData.name;
-                    userNameElement.textContent = displayName;
-                    loggedUser.name = userData.name;
+                    loggedUser.name = displayName;
                     localStorage.setItem('loggedUser', JSON.stringify(loggedUser));
-                    console.log('[USER DISPLAY] User name fetched from Supabase:', displayName);
                 } else {
                     displayName = loggedUser.email.split('@')[0];
-                    userNameElement.textContent = displayName;
                 }
-            } catch (dbError) {
-                console.error('[USER DISPLAY] Error fetching from Supabase:', dbError);
+            } catch {
                 displayName = loggedUser.email.split('@')[0];
-                userNameElement.textContent = displayName;
             }
-        } else {
+        } else if (!displayName) {
             displayName = 'Project Manager';
-            userNameElement.textContent = displayName;
-            console.warn('[USER DISPLAY] No user information found');
         }
         
-        // Update avatar with user initials
-        if (userAvatarElement && displayName) {
+        userNameElement.textContent = displayName;
+        
+        if (userAvatarElement) {
             const initials = displayName.split(' ')
                 .map(word => word.charAt(0).toUpperCase())
                 .join('')
@@ -60,15 +47,10 @@ async function updateUserNameDisplayEnhanced() {
             
             userAvatarElement.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=000&color=fff`;
             userAvatarElement.alt = initials;
-            console.log('[USER DISPLAY] Avatar updated with initials:', initials);
-        } else if (!userAvatarElement) {
-            console.warn('[USER DISPLAY] user-avatar element not found in the DOM');
         }
     } catch (error) {
-        console.error('[USER DISPLAY] Error updating user name:', error);
-        if (userNameElement) {
-            userNameElement.textContent = 'Project Manager';
-        }
+        console.error('[USER DISPLAY] Error:', error);
+        userNameElement.textContent = 'Project Manager';
     }
 }
 
@@ -107,70 +89,50 @@ class ModalManager {
 // ============================================
 
 class MessageManager {
+    static iconMap = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+
     static show(message, type = 'info') {
         const container = document.getElementById('messageContainer');
         if (!container) return;
 
         const messageBox = document.createElement('div');
         messageBox.className = `message-box ${type}`;
+        messageBox.innerHTML = `
+            <i class="fas ${this.iconMap[type]}"></i>
+            <span>${message}</span>
+            <button class="message-close"><i class="fas fa-times"></i></button>
+        `;
 
-        const iconMap = {
-            success: 'fa-check-circle',
-            error: 'fa-exclamation-circle',
-            warning: 'fa-exclamation-triangle',
-            info: 'fa-info-circle'
-        };
-
-        const icon = document.createElement('i');
-        icon.className = `fas ${iconMap[type]}`;
-
-        const text = document.createElement('span');
-        text.textContent = message;
-
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'message-close';
-        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-        closeBtn.addEventListener('click', () => messageBox.remove());
-
-        messageBox.appendChild(icon);
-        messageBox.appendChild(text);
-        messageBox.appendChild(closeBtn);
-
+        messageBox.querySelector('.message-close').addEventListener('click', () => messageBox.remove());
         container.appendChild(messageBox);
-
-        setTimeout(() => {
-            messageBox.remove();
-        }, 5000);
+        setTimeout(() => messageBox.remove(), 5000);
     }
 
-    static success(message) {
-        this.show(message, 'success');
-    }
-
-    static error(message) {
-        this.show(message, 'error');
-    }
-
-    static warning(message) {
-        this.show(message, 'warning');
-    }
-
-    static info(message) {
-        this.show(message, 'info');
-    }
+    static success(message) { this.show(message, 'success'); }
+    static error(message) { this.show(message, 'error'); }
+    static warning(message) { this.show(message, 'warning'); }
+    static info(message) { this.show(message, 'info'); }
 }
 
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
 
-function formatDate(dateString) {
+const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
+    return new Date(dateString).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+    });
+};
 
-function formatStatus(status) {
+const formatStatus = (status) => {
     const statusMap = {
         'pending': 'Pending',
         'approved': 'Approved',
@@ -179,16 +141,13 @@ function formatStatus(status) {
         'cancelled': 'Cancelled'
     };
     return statusMap[status] || status;
-}
+};
 
-function calculateDuration(startDate, endDate) {
+const calculateDuration = (startDate, endDate) => {
     if (!startDate || !endDate) return 'N/A';
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
     return diffDays === 1 ? '1 day' : `${diffDays} days`;
-}
+};
 
 // ============================================
 // DATA SERVICE
@@ -203,26 +162,23 @@ class PMDataService {
     async initialize() {
         const loggedUser = JSON.parse(localStorage.getItem('loggedUser') || '{}');
         
-        if (loggedUser.email) {
-            this.currentPMEmail = loggedUser.email;
-            
-            const { data: userData, error } = await supabase
-                .from('users')
-                .select('id, name, email')
-                .eq('email', this.currentPMEmail)
-                .eq('role', 'project_manager')
-                .single();
-
-            if (error) {
-                console.error('[PM DATA SERVICE] Error fetching PM user:', error);
-                throw error;
-            }
-
-            this.currentPMId = userData.id;
-            console.log('[PM DATA SERVICE] Initialized for PM:', userData);
-        } else {
+        if (!loggedUser.email) {
             throw new Error('No logged in user found');
         }
+
+        this.currentPMEmail = loggedUser.email;
+        
+        const { data: userData, error } = await supabase
+            .from('users')
+            .select('id, name, email')
+            .eq('email', this.currentPMEmail)
+            .eq('role', 'project_manager')
+            .single();
+
+        if (error) throw error;
+
+        this.currentPMId = userData.id;
+        console.log('[PM DATA SERVICE] Initialized for PM:', userData);
     }
 
     async getProjects() {
@@ -272,7 +228,6 @@ class PMDataService {
                 .order('requested_at', { ascending: false });
 
             if (error) throw error;
-            console.log('[PM DATA SERVICE] Resource requests fetched:', data);
             return data || [];
         } catch (error) {
             console.error('[PM DATA SERVICE] Error fetching resource requests:', error);
@@ -282,7 +237,6 @@ class PMDataService {
 
     async createResourceRequest(requestData) {
         try {
-            // First, create project requirements
             const requirementIds = [];
             
             for (const resource of requestData.resources) {
@@ -302,12 +256,11 @@ class PMDataService {
                 requirementIds.push(requirement.id);
             }
 
-            // Create resource request
             const { data: request, error: requestError } = await supabase
                 .from('resource_requests')
                 .insert({
                     project_id: requestData.projectId,
-                    requirement_id: requirementIds[0], // Link to first requirement
+                    requirement_id: requirementIds[0],
                     requested_by: this.currentPMId,
                     status: 'pending',
                     notes: requestData.notes || null,
@@ -319,8 +272,6 @@ class PMDataService {
                 .single();
 
             if (requestError) throw requestError;
-
-            console.log('[PM DATA SERVICE] Resource request created:', request);
             return request;
         } catch (error) {
             console.error('[PM DATA SERVICE] Error creating resource request:', error);
@@ -345,59 +296,49 @@ class ResourceRequestsApp {
         try {
             ModalManager.showLoading();
             
-            // Initialize data service first
             await this.dataService.initialize();
-
-            // IMPORTANT: Call with await since it's async
             await updateUserNameDisplayEnhanced();
             
             this.setupEventListeners();
-            await this.loadProjects();
-            await this.loadRequests();
+            
+            // Parallel loading for better performance
+            await Promise.all([
+                this.loadProjects(),
+                this.loadRequests()
+            ]);
             
             ModalManager.hideLoading();
-            
-            console.log('[RESOURCE REQUESTS APP] Initialization complete');
         } catch (error) {
             ModalManager.hideLoading();
             console.error('[RESOURCE REQUESTS APP] Initialization error:', error);
             MessageManager.error('Failed to initialize. Please login again.');
-            setTimeout(() => {
-                window.location.href = "/login/HTML_Files/login.html";
-            }, 2000);
+            setTimeout(() => window.location.href = "/login/HTML_Files/login.html", 2000);
         }
     }
 
     setupEventListeners() {
-        // Logout button
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.openLogoutModal());
-        }
+        const handlers = {
+            logoutBtn: () => this.openLogoutModal(),
+            newRequestBtn: () => this.openNewRequestModal(),
+            requestStatusFilter: () => this.filterRequests(),
+            closeRequestModal: () => ModalManager.hide('newRequestModal'),
+            cancelFormBtn: () => ModalManager.hide('newRequestModal'),
+            addResourceBtn: () => this.addResourceRow(),
+            closeDetailModal: () => ModalManager.hide('requestDetailModal'),
+            closeDetailBtn: () => ModalManager.hide('requestDetailModal'),
+            cancelLogout: () => ModalManager.hide('logoutModal'),
+            confirmLogout: () => this.handleLogout()
+        };
 
-        // New request button
-        const newRequestBtn = document.getElementById('newRequestBtn');
-        if (newRequestBtn) {
-            newRequestBtn.addEventListener('click', () => this.openNewRequestModal());
-        }
+        Object.entries(handlers).forEach(([id, handler]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                const eventType = id === 'requestStatusFilter' ? 'change' : 'click';
+                element.addEventListener(eventType, handler);
+            }
+        });
 
-        // Status filter
-        const statusFilter = document.getElementById('requestStatusFilter');
-        if (statusFilter) {
-            statusFilter.addEventListener('change', () => this.filterRequests());
-        }
-
-        // New request modal
-        const closeRequestModal = document.getElementById('closeRequestModal');
-        const cancelFormBtn = document.getElementById('cancelFormBtn');
         const requestForm = document.getElementById('requestForm');
-
-        if (closeRequestModal) {
-            closeRequestModal.addEventListener('click', () => ModalManager.hide('newRequestModal'));
-        }
-        if (cancelFormBtn) {
-            cancelFormBtn.addEventListener('click', () => ModalManager.hide('newRequestModal'));
-        }
         if (requestForm) {
             requestForm.addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -405,41 +346,12 @@ class ResourceRequestsApp {
             });
         }
 
-        // Add resource button
-        const addResourceBtn = document.getElementById('addResourceBtn');
-        if (addResourceBtn) {
-            addResourceBtn.addEventListener('click', () => this.addResourceRow());
-        }
-
-        // Detail modal
-        const closeDetailModal = document.getElementById('closeDetailModal');
-        const closeDetailBtn = document.getElementById('closeDetailBtn');
-        
-        if (closeDetailModal) {
-            closeDetailModal.addEventListener('click', () => ModalManager.hide('requestDetailModal'));
-        }
-        if (closeDetailBtn) {
-            closeDetailBtn.addEventListener('click', () => ModalManager.hide('requestDetailModal'));
-        }
-
-        // Logout modal
-        const cancelLogout = document.getElementById('cancelLogout');
-        const confirmLogout = document.getElementById('confirmLogout');
-        
-        if (cancelLogout) {
-            cancelLogout.addEventListener('click', () => ModalManager.hide('logoutModal'));
-        }
-        if (confirmLogout) {
-            confirmLogout.addEventListener('click', () => this.handleLogout());
-        }
-
-        // View request buttons (delegated)
+        // Delegated event for view buttons
         document.addEventListener('click', (e) => {
             if (e.target.closest('.btn-view')) {
                 const card = e.target.closest('.request-card');
                 if (card) {
-                    const requestId = parseInt(card.dataset.id);
-                    this.viewRequestDetail(requestId);
+                    this.viewRequestDetail(parseInt(card.dataset.id));
                 }
             }
         });
@@ -469,28 +381,21 @@ class ResourceRequestsApp {
         const projectSelect = document.getElementById('projectSelect');
         if (!projectSelect) return;
 
-        projectSelect.innerHTML = '<option value="">Select a project</option>';
-        
-        this.projects.forEach(project => {
-            const option = document.createElement('option');
-            option.value = project.id;
-            option.textContent = `${project.name} - ${project.status}`;
-            option.dataset.endDate = project.end_date || '';
-            option.dataset.startDate = project.start_date || '';
-            projectSelect.appendChild(option);
-        });
+        projectSelect.innerHTML = '<option value="">Select a project</option>' + 
+            this.projects.map(project => `
+                <option value="${project.id}" 
+                        data-end-date="${project.end_date || ''}" 
+                        data-start-date="${project.start_date || ''}">
+                    ${project.name} - ${project.status}
+                </option>
+            `).join('');
 
-        // Add change listener to auto-fill end dates
-        projectSelect.addEventListener('change', (e) => {
-            this.onProjectSelected(e.target.value);
-        });
+        projectSelect.addEventListener('change', (e) => this.onProjectSelected(e.target.value));
     }
 
     onProjectSelected(projectId) {
         if (!projectId) {
-            document.querySelectorAll('.resource-end-date').forEach(input => {
-                input.value = '';
-            });
+            document.querySelectorAll('.resource-end-date').forEach(input => input.value = '');
             return;
         }
 
@@ -502,27 +407,14 @@ class ResourceRequestsApp {
             const projectStartDate = selectedOption.dataset.startDate;
 
             document.querySelectorAll('.resource-end-date').forEach(input => {
-                if (projectEndDate) {
-                    input.value = projectEndDate;
-                }
+                if (projectEndDate) input.value = projectEndDate;
+                if (projectEndDate) input.max = projectEndDate;
+                if (projectStartDate) input.min = projectStartDate;
             });
 
             document.querySelectorAll('.resource-start-date').forEach(input => {
-                if (projectStartDate) {
-                    input.min = projectStartDate;
-                }
-                if (projectEndDate) {
-                    input.max = projectEndDate;
-                }
-            });
-
-            document.querySelectorAll('.resource-end-date').forEach(input => {
-                if (projectEndDate) {
-                    input.max = projectEndDate;
-                }
-                if (projectStartDate) {
-                    input.min = projectStartDate;
-                }
+                if (projectStartDate) input.min = projectStartDate;
+                if (projectEndDate) input.max = projectEndDate;
             });
         }
     }
@@ -530,8 +422,7 @@ class ResourceRequestsApp {
     async loadRequests() {
         try {
             const rawRequests = await this.dataService.getResourceRequests();
-            const groupedRequests = this.groupRequestsByProject(rawRequests);
-            this.allRequests = groupedRequests;
+            this.allRequests = this.groupRequestsByProject(rawRequests);
             this.renderRequests(this.allRequests);
         } catch (error) {
             console.error('[RESOURCE REQUESTS APP] Error loading requests:', error);
@@ -546,25 +437,20 @@ class ResourceRequestsApp {
             const groupKey = request.project_id;
             
             if (!groups[groupKey]) {
-                const projectInfo = {
-                    projectName: request.projects?.name || 'Unknown Project',
-                    projectDescription: request.projects?.description || 'No description'
-                };
-                
                 groups[groupKey] = {
                     id: request.id,
                     groupKey: groupKey,
-                    projectInfo: projectInfo,
+                    projectInfo: {
+                        projectName: request.projects?.name || 'Unknown Project',
+                        projectDescription: request.projects?.description || 'No description'
+                    },
                     status: request.status,
                     requested_at: request.requested_at,
                     approved_at: request.approved_at,
                     start_date: request.start_date,
                     end_date: request.end_date,
                     duration_days: request.duration_days,
-                    projects: {
-                        name: projectInfo.projectName,
-                        description: projectInfo.projectDescription
-                    },
+                    projects: request.projects,
                     resources: [],
                     totalQuantity: 0
                 };
@@ -578,7 +464,7 @@ class ResourceRequestsApp {
             };
             
             groups[groupKey].resources.push(resourceInfo);
-            groups[groupKey].totalQuantity += resourceInfo.quantity || 1;
+            groups[groupKey].totalQuantity += resourceInfo.quantity;
         });
         
         return Object.values(groups);
@@ -587,8 +473,6 @@ class ResourceRequestsApp {
     renderRequests(requests) {
         const requestsList = document.getElementById('requestsList');
         if (!requestsList) return;
-
-        requestsList.innerHTML = '';
 
         if (requests.length === 0) {
             requestsList.innerHTML = `
@@ -601,9 +485,9 @@ class ResourceRequestsApp {
             return;
         }
 
+        requestsList.innerHTML = '';
         requests.forEach(request => {
-            const card = this.createRequestCard(request);
-            requestsList.appendChild(card);
+            requestsList.appendChild(this.createRequestCard(request));
         });
     }
 
@@ -616,24 +500,21 @@ class ResourceRequestsApp {
         card.dataset.status = request.status;
         card.innerHTML = template.innerHTML;
 
-        const projectName = card.querySelector('.request-project-name');
-        if (projectName) {
-            projectName.textContent = request.projectInfo?.projectName || request.projects?.name || 'Unknown Project';
-        }
+        const updates = {
+            '.request-project-name': request.projectInfo?.projectName || request.projects?.name || 'Unknown Project',
+            '.meta-project': request.projectInfo?.projectName || request.projects?.name || 'N/A',
+            '.meta-date': formatDate(request.requested_at),
+            '.meta-resources': `${request.totalQuantity} resource(s)`,
+            '.timeline-value': request.resources?.[0]?.assignmentType || 'Full-Time',
+            '.duration-value': calculateDuration(request.start_date, request.end_date),
+            '.start-date-value': formatDate(request.start_date),
+            '.end-date-value': formatDate(request.end_date)
+        };
 
-        const metaProject = card.querySelector('.meta-project');
-        const metaDate = card.querySelector('.meta-date');
-        const metaResources = card.querySelector('.meta-resources');
-
-        if (metaProject) {
-            metaProject.textContent = request.projectInfo?.projectName || request.projects?.name || 'N/A';
-        }
-        if (metaDate) {
-            metaDate.textContent = formatDate(request.requested_at);
-        }
-        if (metaResources) {
-            metaResources.textContent = `${request.totalQuantity} resource(s)`;
-        }
+        Object.entries(updates).forEach(([selector, value]) => {
+            const elem = card.querySelector(selector);
+            if (elem) elem.textContent = value;
+        });
 
         const statusElem = card.querySelector('.request-status');
         if (statusElem) {
@@ -643,45 +524,19 @@ class ResourceRequestsApp {
 
         const skillsContainer = card.querySelector('.skills-tags');
         if (skillsContainer && request.resources) {
-            const allSkills = new Set();
-            request.resources.forEach(resource => {
-                if (resource.skills) {
-                    resource.skills.forEach(skill => allSkills.add(skill));
-                }
-            });
+            const allSkills = [...new Set(request.resources.flatMap(r => r.skills || []))];
             
-            const skillsArray = Array.from(allSkills);
-            if (skillsArray.length > 0) {
-                skillsContainer.innerHTML = skillsArray.slice(0, 5).map(skill => 
-                    `<span class="skill-tag">${skill}</span>`
-                ).join('');
+            if (allSkills.length > 0) {
+                skillsContainer.innerHTML = allSkills.slice(0, 5)
+                    .map(skill => `<span class="skill-tag">${skill}</span>`)
+                    .join('');
                 
-                if (skillsArray.length > 5) {
-                    skillsContainer.innerHTML += `<span class="skill-tag">+${skillsArray.length - 5} more</span>`;
+                if (allSkills.length > 5) {
+                    skillsContainer.innerHTML += `<span class="skill-tag">+${allSkills.length - 5} more</span>`;
                 }
             } else {
                 skillsContainer.innerHTML = '<span class="skill-tag">No skills specified</span>';
             }
-        }
-
-        const timelineValue = card.querySelector('.timeline-value');
-        if (timelineValue && request.resources && request.resources.length > 0) {
-            timelineValue.textContent = request.resources[0].assignmentType || 'Full-Time';
-        }
-
-        const durationValue = card.querySelector('.duration-value');
-        if (durationValue) {
-            durationValue.textContent = calculateDuration(request.start_date, request.end_date);
-        }
-
-        const startDateValue = card.querySelector('.start-date-value');
-        if (startDateValue) {
-            startDateValue.textContent = formatDate(request.start_date);
-        }
-
-        const endDateValue = card.querySelector('.end-date-value');
-        if (endDateValue) {
-            endDateValue.textContent = formatDate(request.end_date);
         }
 
         return card;
@@ -689,11 +544,9 @@ class ResourceRequestsApp {
 
     filterRequests() {
         const status = document.getElementById('requestStatusFilter').value;
-        let filteredRequests = this.allRequests;
-
-        if (status) {
-            filteredRequests = filteredRequests.filter(req => req.status === status);
-        }
+        const filteredRequests = status 
+            ? this.allRequests.filter(req => req.status === status)
+            : this.allRequests;
 
         this.renderRequests(filteredRequests);
     }
@@ -726,9 +579,7 @@ class ResourceRequestsApp {
         resourceRow.innerHTML = template.innerHTML;
 
         const title = resourceRow.querySelector('.resource-row-title');
-        if (title) {
-            title.textContent = `Resource #${this.resourceRowCount}`;
-        }
+        if (title) title.textContent = `Resource #${this.resourceRowCount}`;
 
         if (this.resourceRowCount > 1) {
             const removeBtn = resourceRow.querySelector('.btn-remove-resource');
@@ -744,7 +595,7 @@ class ResourceRequestsApp {
         container.appendChild(resourceRow);
 
         const projectSelect = document.getElementById('projectSelect');
-        if (projectSelect && projectSelect.value) {
+        if (projectSelect?.value) {
             this.onProjectSelected(projectSelect.value);
         }
     }
@@ -753,9 +604,7 @@ class ResourceRequestsApp {
         const rows = document.querySelectorAll('.resource-row');
         rows.forEach((row, index) => {
             const title = row.querySelector('.resource-row-title');
-            if (title) {
-                title.textContent = `Resource #${index + 1}`;
-            }
+            if (title) title.textContent = `Resource #${index + 1}`;
         });
         this.resourceRowCount = rows.length;
     }
@@ -786,14 +635,12 @@ class ResourceRequestsApp {
                 return;
             }
 
-            const skills = skillsInput.split(',').map(s => s.trim()).filter(s => s);
-
             resources.push({
                 position,
                 quantity,
                 experienceLevel,
                 assignmentType,
-                skills,
+                skills: skillsInput.split(',').map(s => s.trim()).filter(s => s),
                 startDate,
                 endDate,
                 justification
@@ -806,9 +653,9 @@ class ResourceRequestsApp {
         }
 
         const firstResource = resources[0];
-        const start = new Date(firstResource.startDate);
-        const end = new Date(firstResource.endDate);
-        const durationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        const durationDays = Math.ceil(
+            (new Date(firstResource.endDate) - new Date(firstResource.startDate)) / (1000 * 60 * 60 * 24)
+        );
 
         const requestData = {
             projectId: parseInt(projectId),
@@ -839,17 +686,28 @@ class ResourceRequestsApp {
         const request = this.allRequests.find(r => r.id === requestId);
         if (!request) return;
 
-        document.getElementById('detailProjectName').textContent = request.projectInfo?.projectName || request.projects?.name || 'Unknown Project';
-        document.getElementById('detailProjectDesc').textContent = request.projectInfo?.projectDescription || request.projects?.description || 'No description';
+        const detailUpdates = {
+            detailProjectName: request.projectInfo?.projectName || request.projects?.name || 'Unknown Project',
+            detailProjectDesc: request.projectInfo?.projectDescription || request.projects?.description || 'No description',
+            detailSubmitted: formatDate(request.requested_at),
+            detailStartDate: formatDate(request.start_date),
+            detailEndDate: formatDate(request.end_date),
+            detailDuration: calculateDuration(request.start_date, request.end_date),
+            detailNotes: request.resources?.map((r, i) => 
+                `Resource ${i + 1}: ${r.justification || 'No justification'}`
+            ).join('\n\n') || 'No additional notes'
+        };
+
+        Object.entries(detailUpdates).forEach(([id, value]) => {
+            const elem = document.getElementById(id);
+            if (elem) elem.textContent = value;
+        });
 
         const statusElem = document.getElementById('detailStatus');
-        statusElem.textContent = formatStatus(request.status);
-        statusElem.className = `request-status ${request.status}`;
-
-        document.getElementById('detailSubmitted').textContent = formatDate(request.requested_at);
-        document.getElementById('detailStartDate').textContent = formatDate(request.start_date);
-        document.getElementById('detailEndDate').textContent = formatDate(request.end_date);
-        document.getElementById('detailDuration').textContent = calculateDuration(request.start_date, request.end_date);
+        if (statusElem) {
+            statusElem.textContent = formatStatus(request.status);
+            statusElem.className = `request-status ${request.status}`;
+        }
 
         const approvedRow = document.getElementById('detailApprovedRow');
         if (request.approved_at) {
@@ -860,32 +718,20 @@ class ResourceRequestsApp {
         }
 
         const tbody = document.getElementById('requirementsTableBody');
-        tbody.innerHTML = '';
-        
-        if (request.resources && request.resources.length > 0) {
-            request.resources.forEach((resource, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${resource.quantity || 1}</td>
-                    <td><span class="experience-badge ${resource.experienceLevel}">${resource.experienceLevel || 'N/A'}</span></td>
-                    <td>${resource.assignmentType || 'Full-Time'}</td>
-                    <td>
-                        <div class="skills-tags">
-                            ${(resource.skills || []).map(skill => 
-                                `<span class="skill-tag">${skill}</span>`
-                            ).join('')}
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        const notesText = request.resources && request.resources.length > 0 && request.resources[0].justification
-            ? request.resources.map((r, i) => `Resource ${i + 1}: ${r.justification || 'No justification'}`).join('\n\n')
-            : 'No additional notes';
-        
-        document.getElementById('detailNotes').textContent = notesText;
+        tbody.innerHTML = (request.resources || []).map(resource => `
+            <tr>
+                <td>${resource.quantity || 1}</td>
+                <td><span class="experience-badge ${resource.experienceLevel}">${resource.experienceLevel || 'N/A'}</span></td>
+                <td>${resource.assignmentType || 'Full-Time'}</td>
+                <td>
+                    <div class="skills-tags">
+                        ${(resource.skills || []).map(skill => 
+                            `<span class="skill-tag">${skill}</span>`
+                        ).join('')}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
 
         ModalManager.show('requestDetailModal');
     }
@@ -899,10 +745,7 @@ class ResourceRequestsApp {
         sessionStorage.clear();
         ModalManager.hide('logoutModal');
         ModalManager.showLoading();
-        
-        setTimeout(() => {
-            window.location.href = "/login/HTML_Files/login.html";
-        }, 500);
+        setTimeout(() => window.location.href = "/login/HTML_Files/login.html", 500);
     }
 }
 

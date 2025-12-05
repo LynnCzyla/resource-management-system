@@ -17,16 +17,25 @@ function debounce(func, wait) {
 // ============================================
 // DATA SERVICE - Ready for Supabase Integration
 // ============================================
+// ============================================
+// DATA SERVICE - Ready for Supabase Integration
+// ============================================
 class ProfileDataService {
     constructor() {
-        this.supabase = supabase; //
-        this.currentEmployeeId = null; // will set after login
+        this.supabase = supabase;
+        this.currentUserId = null;
+        this.bucketName = 'cvs';
+        this.profileCache = null; // Add caching
+        this.cacheTimestamp = null;
+        this.CACHE_DURATION = 30000; // 30 seconds cache
     }
 
+    // ADD THIS MISSING METHOD
     setCurrentUser(userId) {
         this.currentUserId = userId;
     }
 
+    // ADD THIS MISSING METHOD
     async getEmployeeFolderId() {
         if (!this.currentUserId) throw new Error('No logged-in user ID set');
     
@@ -41,95 +50,10 @@ class ProfileDataService {
             throw error;
         }
     
-        return data.employee_id; // e.g., "EMP-1014"
-    }
-    
-
-    // Employee Profile Methods
-    async getEmployeeProfile() {
-        if (!this.currentUserId) throw new Error('No logged-in user ID set');
-    
-        // 1. Fetch main profile info
-        const { data, error } = await this.supabase
-            .from('user_details')
-            .select(`
-                *,
-                users (name, email, role)
-            `)
-            .eq('user_id', this.currentUserId)
-            .single();
-    
-        if (error) throw error;
-    
-        // 2. Fetch uploaded files for this employee
-        const { data: filesData, error: filesError } = await this.supabase
-            .from('employee_files')
-            .select('*')
-            .eq('employee_id', data.employee_id)
-            .order('uploaded_at', { ascending: false }); // optional: newest first
-    
-        if (filesError) throw filesError;
-    
-        return {
-            id: data.employee_id || '',
-            name: data.users?.name || '',
-            email: data.users?.email || '',
-            role: data.job_title || '',
-            department: data.department || '',
-            phone_number: data.phone_number || '',
-            status: data.status || 'Available',
-            avatar: data.profile_pic || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.users?.name || 'User')}&background=4A90E2&color=fff`,
-            location: data.location || '',
-            joinDate: data.join_date ? new Date(data.join_date).toISOString().split('T')[0] : '',
-            experienceLevel: data.experience_level || 'beginner',
-            skills: (data.skills || []).map(skill => ({ name: skill, level: 'Intermediate' })),
-            uploadedFiles: (filesData || []).map(f => ({
-                name: f.filename,
-                size: 'Unknown', // optional: can store size when uploading
-                uploadDate: f.uploaded_at
-            }))
-        };
-    }
-    
-
-
-    async updateEmployeeProfile(profileData) {
-        if (!this.currentUserId) throw new Error('No logged-in user ID');
-    
-        const { data: mainData, error: mainError } = await this.supabase
-            .from('user_details')
-            .update({
-                job_title: profileData.role,
-                department: profileData.department,
-                phone_number: profileData.phone_number,
-                profile_pic: profileData.avatar,
-                location: profileData.location,
-                experience_level: profileData.experienceLevel,
-                skills: profileData.skills.map(s => s.name) // store as array of skill names
-            })
-            .eq('user_id', this.currentUserId);
-    
-        if (mainError) throw mainError;
-    
-        if (profileData.uploadedFiles && profileData.uploadedFiles.length > 0) {
-            const { error: fileError } = await this.supabase
-                .from('employee_files')
-                .upsert(
-                    profileData.uploadedFiles.map(file => ({
-                        employee_id: profileData.id,
-                        filename: file.name,
-                        uploaded_at: file.uploadDate
-                    })),
-                    { onConflict: ['employee_id', 'filename'] } // <-- ADD THIS
-                );
-            if (fileError) throw fileError;
-        }
-        
-    
-        return { success: true };
+        return data.employee_id;
     }
 
-
+    // ADD THIS MISSING METHOD
     async uploadProfilePicture(file) {
         try {
             const { data: userDetails, error: detailsError } = await this.supabase
@@ -174,104 +98,8 @@ class ProfileDataService {
             throw error;
         }
     }
-    
-    
 
-    async uploadCV(files) {
-        const formData = new FormData();
-        files.forEach(file => formData.append('files', file));
-    
-        try {
-            // Call the FastAPI endpoint
-            const response = await fetch('http://127.0.0.1:8000/extract_skills/', {
-                method: 'POST',
-                body: formData
-            });
-    
-            if (!response.ok) {
-                throw new Error('Failed to extract skills from CV');
-            }
-    
-            const result = await response.json();
-    
-            // Return file info + extracted skills
-            return {
-                success: true,
-                fileName: file.name,
-                fileSize: this.formatFileSize(file.size),
-                uploadDate: new Date().toISOString().split('T')[0],
-                skills: result.skills || [] // Skills from FastAPI
-            };
-    
-        } catch (error) {
-            console.error('Error uploading CV:', error);
-            return { success: false, skills: [] };
-        }
-    }
-    
-async deleteCV(fileName) {
-    if (!this.currentUserId) throw new Error('No logged-in user ID');
-
-    try {
-        // 1. Get employee_id
-        const employeeId = await this.getEmployeeFolderId();
-
-        // 2. Delete from Supabase table
-        const { error: dbError } = await this.supabase
-            .from('employee_files')
-            .delete()
-            .eq('employee_id', employeeId)
-            .eq('filename', fileName);
-
-        if (dbError) throw dbError;
-
-        // 3. Delete from local FastAPI folder
-        const url = new URL('http://127.0.0.1:8000/delete_cv/');
-        url.searchParams.append('employee_id', employeeId);
-        url.searchParams.append('filename', fileName);
-
-        const response = await fetch(url.toString(), { method: 'DELETE' });
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            throw new Error(result.detail || 'Failed to delete file from local folder');
-        }
-
-        console.log('[DEBUG] File deleted successfully:', fileName);
-        return { success: true };
-    } catch (error) {
-        console.error('Error deleting CV:', error);
-        return { success: false, message: error.message };
-    }
-}
-
-// In ProfileApp class
-async deleteFile(fileName) {
-    const confirmed = await this.uiManager.showConfirmation(
-        'Delete File',
-        `Are you sure you want to delete "${fileName}"? This action cannot be undone.`
-    );
-
-    if (confirmed) {
-        try {
-            this.uiManager.showLoading('Deleting file...');
-            await this.dataService.deleteCV(fileName); // backend call
-            // Remove file from UI list
-            this.currentProfile.uploadedFiles = this.currentProfile.uploadedFiles.filter(
-                f => f.name !== fileName
-            );
-            this.uiManager.renderUploadedFiles(this.currentProfile.uploadedFiles);
-            this.uiManager.showSuccess('File deleted successfully');
-        } catch (error) {
-            console.error('Error deleting file:', error);
-            this.uiManager.showError(error.message || 'Failed to delete file');
-        } finally {
-            this.uiManager.hideLoading();
-        }
-    }
-}
-
-
+    // ADD THIS MISSING METHOD
     async removeSkill(skillName) {
         if (!this.currentUserId) throw new Error('No logged-in user ID');
     
@@ -298,8 +126,8 @@ async deleteFile(fileName) {
         console.log('Skill removed:', skillName);
         return { success: true };
     }
-    
 
+    // ADD THIS MISSING METHOD
     async updateExperience(experienceData) {
         if (!this.currentUserId) throw new Error('No logged-in user ID');
     
@@ -316,8 +144,48 @@ async deleteFile(fileName) {
         console.log('Experience updated in DB:', experienceData);
         return { success: true };
     }
-    
 
+    // ADD THIS MISSING METHOD
+    async deleteCV(fileName) {
+        if (!this.currentUserId) throw new Error('No logged-in user ID');
+    
+        try {
+            const employeeId = await this.getEmployeeFolderId();
+            
+            // List files to find the exact file to delete
+            const { data: files, error: listError } = await this.supabase.storage
+                .from(this.bucketName)
+                .list(employeeId);
+            
+            if (listError) throw listError;
+
+            // Find the file - we need to match by the original name stored in the object
+            const fileToDelete = files.find(f => {
+                return f.name.includes(fileName) || f.name === fileName;
+            });
+
+            if (!fileToDelete) {
+                throw new Error('File not found in storage');
+            }
+
+            const filePath = `${employeeId}/${fileToDelete.name}`;
+            
+            // Delete from Supabase storage
+            const { error: deleteError } = await this.supabase.storage
+                .from(this.bucketName)
+                .remove([filePath]);
+
+            if (deleteError) throw deleteError;
+
+            console.log('[DEBUG] File deleted successfully:', fileName);
+            return { success: true };
+        } catch (error) {
+            console.error('Error deleting CV:', error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    // ADD THIS MISSING METHOD
     formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -326,7 +194,121 @@ async deleteFile(fileName) {
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
 
-   
+    async getEmployeeProfile(forceRefresh = false) {
+        // Return cached data if still valid
+        if (!forceRefresh && this.profileCache && this.cacheTimestamp && 
+            (Date.now() - this.cacheTimestamp) < this.CACHE_DURATION) {
+            return this.profileCache;
+        }
+
+        if (!this.currentUserId) throw new Error('No logged-in user ID set');
+    
+        try {
+            // Use more specific select to reduce data transfer
+            const { data, error } = await this.supabase
+                .from('user_details')
+                .select(`
+                    employee_id,
+                    job_title,
+                    department,
+                    phone_number,
+                    profile_pic,
+                    location,
+                    join_date,
+                    experience_level,
+                    skills,
+                    users (name, email)
+                `)
+                .eq('user_id', this.currentUserId)
+                .single();
+        
+            if (error) throw error;
+        
+            // Fetch files
+            const employeeId = data.employee_id;
+            const { data: filesData, error: filesError } = await this.supabase.storage
+                .from(this.bucketName)
+                .list(employeeId, { limit: 50, offset: 0 });
+        
+            if (filesError) {
+                console.warn('Error fetching files from storage:', filesError);
+            }
+
+            const uploadedFiles = [];
+            if (filesData && filesData.length > 0) {
+                for (const file of filesData) {
+                    if (file.name) {
+                        const filePath = `${employeeId}/${file.name}`;
+                        const { data: { publicUrl } } = this.supabase.storage
+                            .from(this.bucketName)
+                            .getPublicUrl(filePath);
+                        
+                        uploadedFiles.push({
+                            name: file.name,
+                            size: this.formatFileSize(file.metadata?.size || 0),
+                            uploadDate: file.created_at || new Date().toISOString(),
+                            public_url: publicUrl,
+                            path: filePath
+                        });
+                    }
+                }
+            }
+        
+            const profileData = {
+                id: data.employee_id || '',
+                name: data.users?.name || '',
+                email: data.users?.email || '',
+                role: data.job_title || '',
+                department: data.department || '',
+                phone_number: data.phone_number || '',
+                status: 'Available',
+                avatar: data.profile_pic || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.users?.name || 'User')}&background=4A90E2&color=fff`,
+                location: data.location || '',
+                joinDate: data.join_date ? new Date(data.join_date).toISOString().split('T')[0] : '',
+                experienceLevel: data.experience_level || 'beginner',
+                skills: (data.skills || []).map(skill => ({ name: skill, level: 'Intermediate' })),
+                uploadedFiles: uploadedFiles
+            };
+
+            // Cache the result
+            this.profileCache = profileData;
+            this.cacheTimestamp = Date.now();
+        
+            return profileData;
+        } catch (error) {
+            console.error('Error in getEmployeeProfile:', error);
+            throw error;
+        }
+    }
+
+    async updateEmployeeProfile(profileData) {
+        if (!this.currentUserId) throw new Error('No logged-in user ID');
+    
+        const { error } = await this.supabase
+            .from('user_details')
+            .update({
+                job_title: profileData.role,
+                department: profileData.department,
+                phone_number: profileData.phone_number,
+                profile_pic: profileData.avatar,
+                location: profileData.location,
+                experience_level: profileData.experienceLevel,
+                skills: profileData.skills.map(s => s.name)
+            })
+            .eq('user_id', this.currentUserId);
+    
+        if (error) throw error;
+    
+        // Clear cache after update
+        this.profileCache = null;
+    
+        return { success: true };
+    }
+
+    clearCache() {
+        this.profileCache = null;
+        this.cacheTimestamp = null;
+    }
 }
 
 // ============================================
@@ -335,8 +317,10 @@ async deleteFile(fileName) {
 class ProfileUIManager {
     constructor() {
         this.currentProfile = null;
+        // Move debouncedRender after renderSkills is defined
     }
 
+    // ADD THESE MISSING METHODS
     showLoading(message = 'Loading...') {
         Swal.fire({
             title: message,
@@ -423,12 +407,34 @@ class ProfileUIManager {
         this.renderUploadedFiles(profile.uploadedFiles);
     }
 
+    // ADD THIS MISSING METHOD
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    // ADD THIS MISSING METHOD
+    escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Now define renderSkills before setting up debouncedRender
     renderSkills(skills) {
         const container = document.getElementById('skillsGrid');
         if (!container) return;
     
-        // Empty state
+        // Quick empty state check
         if (!skills || skills.length === 0) {
+            if (container.children.length === 1 && container.querySelector('.empty-state')) {
+                return; // Already showing empty state
+            }
             container.innerHTML = `
                 <div class="empty-state" style="grid-column: 1/-1;">
                     <i class="fas fa-code"></i>
@@ -436,6 +442,18 @@ class ProfileUIManager {
                 </div>
             `;
             return;
+        }
+    
+        // Only re-render if skills actually changed
+        const currentSkillNames = Array.from(container.querySelectorAll('.skill-item h4'))
+            .map(el => el.textContent)
+            .sort()
+            .join(',');
+        
+        const newSkillNames = skills.map(s => s.name).sort().join(',');
+        
+        if (currentSkillNames === newSkillNames) {
+            return; // Skills haven't changed, skip re-render
         }
     
         // Render skills
@@ -451,23 +469,39 @@ class ProfileUIManager {
             </div>
         `).join('');
     
-        // Attach event listeners to remove buttons
-        container.querySelectorAll('.skill-remove').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const skillName = e.currentTarget.dataset.skill;
-                profileApp.removeSkill(skillName); // safely use profileApp here
-            });
-        });
+        // Use event delegation instead of attaching listeners to each button
+        this.setupSkillEventDelegation(container);
     }
-    
+
+    // Now initialize debouncedRender after renderSkills is defined
+    setupDebouncedRender() {
+        this.debouncedRender = debounce(this.renderSkills.bind(this), 100);
+    }
+
+    setupSkillEventDelegation(container) {
+        // Remove existing listeners and attach a single one
+        container.removeEventListener('click', this.skillClickHandler);
+        
+        this.skillClickHandler = (e) => {
+            const removeBtn = e.target.closest('.skill-remove');
+            if (removeBtn) {
+                const skillName = removeBtn.dataset.skill;
+                profileApp.removeSkill(skillName);
+            }
+        };
+        
+        container.addEventListener('click', this.skillClickHandler);
+    }
 
     renderUploadedFiles(files) {
         const container = document.getElementById('uploadedFilesList');
         if (!container) return;
     
-        container.innerHTML = ''; // Clear current content
-    
+        // Quick empty state check
         if (!files || files.length === 0) {
+            if (container.children.length === 1 && container.querySelector('.empty-state')) {
+                return; // Already showing empty state
+            }
             container.innerHTML = `
                 <div class="empty-state" style="grid-column: 1/-1;">
                     <i class="fas fa-file"></i>
@@ -477,65 +511,67 @@ class ProfileUIManager {
             return;
         }
     
-        files.forEach(file => {
-            const fileDiv = document.createElement('div');
-            fileDiv.classList.add('uploaded-file');
+        // Only re-render if files actually changed
+        const currentFileNames = Array.from(container.querySelectorAll('.file-details h4'))
+            .map(el => el.textContent)
+            .sort()
+            .join(',');
+        
+        const newFileNames = files.map(f => f.name).sort().join(',');
+        
+        if (currentFileNames === newFileNames) {
+            return; // Files haven't changed, skip re-render
+        }
     
-            // Determine icon
-            let iconClass = 'fas fa-file'; // default generic file
+        container.innerHTML = files.map(file => {
+            let iconClass = 'fas fa-file';
             if (file.name.endsWith('.pdf')) iconClass = 'fas fa-file-pdf';
             else if (file.name.endsWith('.doc') || file.name.endsWith('.docx')) iconClass = 'fas fa-file-word';
             else if (file.name.endsWith('.jpg') || file.name.endsWith('.jpeg') || file.name.endsWith('.png')) iconClass = 'fas fa-file-image';
     
-            fileDiv.innerHTML = `
-                <div class="file-info">
-                    <div class="file-icon"><i class="${iconClass}"></i></div>
-                    <div class="file-details">
-                        <h4>${this.escapeHtml(file.name)}</h4>
-                        <p>${this.escapeHtml(file.size)} • Uploaded ${this.formatDate(file.uploadDate)}</p>
+            return `
+                <div class="uploaded-file">
+                    <div class="file-info">
+                        <div class="file-icon"><i class="${iconClass}"></i></div>
+                        <div class="file-details">
+                            <h4>${this.escapeHtml(file.name)}</h4>
+                            <p>${this.escapeHtml(file.size)} • Uploaded ${this.formatDate(file.uploadDate)}</p>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="icon-btn view-btn" title="View" data-file="${this.escapeHtml(file.name)}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="icon-btn delete-btn" title="Delete" data-file="${this.escapeHtml(file.name)}">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="file-actions">
-                    <button class="icon-btn view-btn" title="View">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="icon-btn delete-btn" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
             `;
-            container.appendChild(fileDiv);
+        }).join('');
     
-            // Attach event listeners
-            const viewBtn = fileDiv.querySelector('.view-btn');
-            const deleteBtn = fileDiv.querySelector('.delete-btn');
-    
-            viewBtn.addEventListener('click', () => {
-                profileApp.viewFile(file.name); // Use the new preview logic
-            });
-    
-            deleteBtn.addEventListener('click', () => {
-                profileApp.deleteFile(file.name);
-            });
-        });
-    }
-    
-    
-
-    formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        // Use event delegation for file actions
+        this.setupFileEventDelegation(container);
     }
 
-    escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
+    setupFileEventDelegation(container) {
+        // Remove existing listeners and attach single ones
+        container.removeEventListener('click', this.fileClickHandler);
+        
+        this.fileClickHandler = (e) => {
+            const viewBtn = e.target.closest('.view-btn');
+            const deleteBtn = e.target.closest('.delete-btn');
+            
+            if (viewBtn) {
+                const fileName = viewBtn.dataset.file;
+                profileApp.viewFile(fileName);
+            } else if (deleteBtn) {
+                const fileName = deleteBtn.dataset.file;
+                profileApp.deleteFile(fileName);
+            }
         };
-        return text.replace(/[&<>"']/g, m => map[m]);
+        
+        container.addEventListener('click', this.fileClickHandler);
     }
 }
 
@@ -547,9 +583,11 @@ class ProfileApp {
         this.dataService = new ProfileDataService();
         this.uiManager = new ProfileUIManager();
         this.currentProfile = null;
+        // Initialize debounced render after UI manager is created
+        this.uiManager.setupDebouncedRender();
     }
 
-    async init(loggedInUser) { // pass the logged-in user here
+    async init(loggedInUser) {
         try {
             if (!loggedInUser || !loggedInUser.id) throw new Error('User not logged in');
     
@@ -565,8 +603,6 @@ class ProfileApp {
             this.uiManager.showError('Failed to initialize profile');
         }
     }
-    
-    
 
     setupEventListeners() {
         this.setupProfilePictureEvents();
@@ -585,7 +621,6 @@ class ProfileApp {
         // Logout
         this.setupLogoutEvent();
     }
-
 
     setupProfilePictureEvents() {
         const changeAvatarBtn = document.getElementById('changeAvatarBtn');
@@ -729,47 +764,43 @@ class ProfileApp {
         });
     
         // Drop files/folders
-       // Drop event handler
-       cvUploadArea.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        cvUploadArea.classList.remove('drag-over');
-    
-        const items = e.dataTransfer.items;
-        const allFiles = [];
-    
-        for (let i = 0; i < items.length; i++) {
-            const entry = items[i].webkitGetAsEntry();
-            if (entry) {
-                const filesFromEntry = await this.readEntryRecursively(entry);
-                allFiles.push(...filesFromEntry);
+        cvUploadArea.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            cvUploadArea.classList.remove('drag-over');
+        
+            const items = e.dataTransfer.items;
+            const allFiles = [];
+        
+            for (let i = 0; i < items.length; i++) {
+                const entry = items[i].webkitGetAsEntry();
+                if (entry) {
+                    const filesFromEntry = await this.readEntryRecursively(entry);
+                    allFiles.push(...filesFromEntry);
+                }
             }
-        }
-    
-        // Remove duplicates
-        const uniqueFilesMap = new Map();
-        allFiles.forEach(file => {
-            const key = `${file.name}-${file.size}`;
-            if (!uniqueFilesMap.has(key)) uniqueFilesMap.set(key, file);
+        
+            // Remove duplicates
+            const uniqueFilesMap = new Map();
+            allFiles.forEach(file => {
+                const key = `${file.name}-${file.size}`;
+                if (!uniqueFilesMap.has(key)) uniqueFilesMap.set(key, file);
+            });
+            const uniqueFiles = Array.from(uniqueFilesMap.values());
+        
+            if (uniqueFiles.length > 0) {
+                await this.handleCVUpload(uniqueFiles);
+            }
         });
-        const uniqueFiles = Array.from(uniqueFilesMap.values());
-    
-        if (uniqueFiles.length > 0) {
-            // Simply upload files as-is
-            await profileApp.handleCVUpload(uniqueFiles);
-        }
-    });
     
         // File input change (multi-select)
         cvFileInput.addEventListener('change', async (e) => {
             if (e.target.files.length > 0) {
                 const files = [...e.target.files];
-                // Simply upload files as-is
-                await profileApp.handleCVUpload(files);
+                await this.handleCVUpload(files);
             }
         });
-        
     }
-    
+
     // Recursively read files from a folder entry
     async readEntryRecursively(entry) {
         return new Promise((resolve) => {
@@ -797,7 +828,6 @@ class ProfileApp {
             }
         });
     }
-    
 
     setupSkillEvents() {
         const addSkillBtn = document.getElementById('addSkillBtn');
@@ -840,12 +870,11 @@ class ProfileApp {
             this.uiManager.showError('Failed to load profile');
         }
     }
-    
 
     async handleCVUpload(files) {
         if (!files || files.length === 0) return;
     
-        const maxSize = 5 * 1024 * 1024; // 5MB
+        const maxSize = 5 * 1024 * 1024;
         const allowedTypes = [
             'application/pdf',
             'application/msword',
@@ -854,118 +883,115 @@ class ProfileApp {
             'image/png'
         ];
     
-        // Validate files
-        for (const file of files) {
-            if (file.size > maxSize) {
-                this.uiManager.showError(`File "${file.name}" exceeds 5MB`);
-                return;
-            }
-            if (!allowedTypes.includes(file.type)) {
-                this.uiManager.showError(`File "${file.name}" is not allowed`);
-                return;
-            }
+        // Quick validation without detailed error messages for each file
+        const invalidFiles = files.filter(file => 
+            file.size > maxSize || !allowedTypes.includes(file.type)
+        );
+        
+        if (invalidFiles.length > 0) {
+            this.uiManager.showError(`${invalidFiles.length} file(s) are invalid (wrong type or too large)`);
+            return;
         }
     
         try {
-            this.uiManager.showLoading('Uploading files...');
+            this.uiManager.showLoading(`Uploading ${files.length} file(s)...`);
     
-            // --- 1. Upload files to FastAPI /uploads folder ---
-            const formData = new FormData();
-            formData.append('employee_id', await this.dataService.getEmployeeFolderId());
-            files.forEach(file => formData.append('files', file));
+            const employeeId = await this.dataService.getEmployeeFolderId();
     
-            const uploadResponse = await fetch('http://127.0.0.1:8000/upload_cv/', {
+            // Upload files - don't wait for skill extraction
+            const uploadFormData = new FormData();
+            uploadFormData.append('employee_id', employeeId);
+            files.forEach(file => uploadFormData.append('files', file));
+    
+            const uploadPromise = fetch('http://127.0.0.1:8000/upload_cv/', {
                 method: 'POST',
-                body: formData
+                body: uploadFormData
             });
-            const uploadResult = await uploadResponse.json();
-            if (!uploadResult.success) throw new Error('Failed to save files locally');
-    
-            // Map uploaded files for front-end display
-            const uploadedFiles = uploadResult.files.map(f => ({
-                name: f.filename,
-                size: this.dataService.formatFileSize(files.find(file => file.name === f.filename).size),
-                uploadDate: new Date().toISOString().split('T')[0],
-                url: `http://127.0.0.1:8000/${f.path.replace(/\\/g, '/')}` 
-            }));
-    
-            // --- 2. Extract skills from uploaded files without saving again ---
-            const skillResponse = await fetch('http://127.0.0.1:8000/extract_skills/', {
-                method: 'POST',
-                body: formData // reuse the same files in memory
-            });
-            const skillResult = skillResponse.ok ? await skillResponse.json() : { skills: [] };
-            const extractedSkills = Array.isArray(skillResult.skills) ? skillResult.skills : [];
-    
-            // --- 3. Update profile and render ---
-            this.currentProfile.uploadedFiles.push(...uploadedFiles);
-            this.uiManager.renderUploadedFiles(this.currentProfile.uploadedFiles);
-    
-            extractedSkills.forEach(skill => {
-                if (!this.currentProfile.skills.find(s => s.name.toLowerCase() === skill.toLowerCase())) {
-                    this.currentProfile.skills.push({ name: skill, level: 'Intermediate' });
-                }
-            });
-            this.uiManager.renderSkills(this.currentProfile.skills);
-
-    
-            // --- 4. Success notification ---
-            await Swal.fire({
-                icon: 'success',
-                title: 'CV Uploaded Successfully!',
-                html: `
-                    <p>Your CV has been processed using OCR and NLP.</p>
-                    <p style="margin-top: 12px;"><strong>Extracted Skills:</strong></p>
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px;">
-                        ${extractedSkills.length
-                            ? extractedSkills.map(skill => `
-                                <span style="
-                                    padding: 6px 12px;
-                                    background-color: #E9ECEF;
-                                    border-radius: 4px;
-                                    font-size: 12px;
-                                ">
-                                    ${skill}
-                                </span>
-                            `).join('')
-                            : '<em>No skills detected.</em>'
-                        }
-                    </div>
-                `,
-                confirmButtonColor: '#000000'
-            });            
             
+            // Start skill extraction in parallel but don't wait for it
+            const skillPromise = this.extractSkillsParallel(files, employeeId);
+    
+            const uploadResponse = await uploadPromise;
+            
+            if (!uploadResponse.ok) {
+                throw new Error(`Upload failed with status: ${uploadResponse.status}`);
+            }
+    
+            // Refresh profile immediately after upload
+            this.dataService.clearCache(); // Force refresh
+            this.currentProfile = await this.dataService.getEmployeeProfile();
+            this.uiManager.renderProfile(this.currentProfile);
+            this.uiManager.updateHeaderInfo(this.currentProfile);
+    
+            this.uiManager.hideLoading();
+    
+            // Show success immediately, skills will be added in background
+            this.uiManager.showSuccess(`${files.length} file(s) uploaded successfully!`);
+    
+            // Process skills in background and update when ready
+            skillPromise.then(extractedSkills => {
+                if (extractedSkills && extractedSkills.length > 0) {
+                    this.addExtractedSkills(extractedSkills);
+                }
+            }).catch(error => {
+                console.warn('Skill extraction completed with warnings:', error);
+            });
     
         } catch (error) {
-            console.error('Error uploading files:', error);
-            this.uiManager.showError(error.message);
-        } finally {
             this.uiManager.hideLoading();
+            console.error('Error uploading files:', error);
+            this.uiManager.showError(error.message || 'Failed to upload files');
         }
     }
 
-    async readDirectory(directoryEntry) {
-        const reader = directoryEntry.createReader();
-        const entries = await new Promise((resolve, reject) => {
-            reader.readEntries(resolve, reject);
-        });
+    async extractSkillsParallel(files, employeeId) {
+        try {
+            const skillFormData = new FormData();
+            files.forEach(file => skillFormData.append('files', file));
+            skillFormData.append('employee_number', employeeId);
     
-        for (const entry of entries) {
-            if (entry.isFile) {
-                const file = await new Promise((resolve, reject) =>
-                    entry.file(resolve, reject)
-                );
-                await this.handleCVUpload([file]); // handleCVUpload expects an array
-            } else if (entry.isDirectory) {
-                await this.readDirectory(entry); // Recursive call
+            const skillResponse = await fetch('http://127.0.0.1:8000/extract_skills/', {
+                method: 'POST',
+                body: skillFormData
+            });
+            
+            if (!skillResponse.ok) return [];
+            
+            const skillResult = await skillResponse.json();
+            return Array.isArray(skillResult.skills) ? skillResult.skills : [];
+        } catch (error) {
+            console.warn('Skill extraction failed:', error);
+            return [];
+        }
+    }
+
+    async addExtractedSkills(extractedSkills) {
+        if (!extractedSkills.length) return;
+        
+        let skillsAdded = 0;
+        extractedSkills.forEach(skill => {
+            if (!this.currentProfile.skills.find(s => s.name.toLowerCase() === skill.toLowerCase())) {
+                this.currentProfile.skills.push({ name: skill, level: 'Intermediate' });
+                skillsAdded++;
+            }
+        });
+        
+        if (skillsAdded > 0) {
+            this.uiManager.renderSkills(this.currentProfile.skills);
+            // Optional: show a subtle notification about new skills
+            if (skillsAdded > 0) {
+                console.log(`Added ${skillsAdded} new skills from uploaded files`);
             }
         }
     }
 
-
-    
-    
-    
+    // Add this method to handle bulk operations more efficiently
+    async bulkUpdateProfile(updates) {
+        // This would be called when multiple changes happen at once
+        // to prevent multiple API calls
+        Object.assign(this.currentProfile, updates);
+        await this.dataService.updateEmployeeProfile(this.currentProfile);
+    }
 
     async addSkill() {
         const { value: formValues } = await Swal.fire({
@@ -999,7 +1025,7 @@ class ProfileApp {
                 }
 
                 // Check if skill already exists
-                const existingSkill = profileApp.currentProfile.skills.find(
+                const existingSkill = this.currentProfile.skills.find(
                     s => s.name.toLowerCase() === skillName.toLowerCase()
                 );
                 
@@ -1127,51 +1153,74 @@ class ProfileApp {
     async viewFile(fileName) {
         if (!this.currentProfile) return;
     
-        // Find the file in the current profile
-        const file = this.currentProfile.uploadedFiles.find(f => f.name === fileName);
-        if (!file) {
+        const fileData = this.currentProfile.uploadedFiles.find(f => f.name === fileName);
+        if (!fileData) {
             this.uiManager.showError('File not found');
             return;
         }
     
-        // Construct the public URL served by FastAPI
-        const employeeId = this.currentProfile.id;
-        const fileUrl = `http://127.0.0.1:8000/uploads/${employeeId}/${encodeURIComponent(fileName)}`;
+        const fileUrl = fileData.public_url;
+        const fileExtension = fileName.split('.').pop().toLowerCase();
     
-        // Determine preview content
-        let previewHtml = '';
-        if (fileName.match(/\.(jpg|jpeg|png|gif)$/i)) {
-            previewHtml = `<img src="${fileUrl}" alt="${fileName}" style="max-width: 100%; max-height: 400px; border-radius: 6px;" />`;
-        } else if (fileName.match(/\.pdf$/i)) {
-            previewHtml = `
-                <iframe src="${fileUrl}" width="100%" height="400px" style="border: none;"></iframe>
-            `;
+        if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
+            await Swal.fire({
+                title: fileName,
+                html: `
+                    <div style="text-align: center; padding: 20px;">
+                        <img src="${fileUrl}" alt="${fileName}" style="max-width: 100%; max-height: 400px; border-radius: 6px;" />
+                    </div>
+                `,
+                width: 700,
+                confirmButtonColor: '#000000',
+                confirmButtonText: 'Close'
+            });
+        } else if (fileExtension === 'pdf') {
+            const googleViewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`;
+            
+            await Swal.fire({
+                title: fileName,
+                html: `
+                    <div style="text-align: center; padding: 20px;">
+                        <iframe src="${googleViewerUrl}" width="100%" height="400px" style="border: none;"></iframe>
+                        <p style="font-size: 12px; color: #6C757D; margin-top: 8px;">
+                            PDF loading... If it doesn't appear, use the download option.
+                        </p>
+                    </div>
+                `,
+                width: 700,
+                confirmButtonColor: '#000000',
+                confirmButtonText: 'Close',
+                showCancelButton: true,
+                cancelButtonText: 'Download',
+                cancelButtonColor: '#4A90E2'
+            }).then((result) => {
+                if (result.isDismissed) {
+                    window.open(fileUrl, '_blank');
+                }
+            });
         } else {
-            previewHtml = `<p style="margin-top: 20px;">Preview not available for this file type.</p>`;
+            await Swal.fire({
+                title: fileName,
+                html: `
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-file" style="font-size: 64px; color: #6C757D;"></i>
+                        <p style="margin-top: 16px;">Preview not available for this file type.</p>
+                        <p style="color: #6C757D;">Click "Download" to view the file.</p>
+                    </div>
+                `,
+                width: 500,
+                confirmButtonColor: '#000000',
+                confirmButtonText: 'Close',
+                showCancelButton: true,
+                cancelButtonText: 'Download',
+                cancelButtonColor: '#4A90E2'
+            }).then((result) => {
+                if (result.isDismissed) {
+                    window.open(fileUrl, '_blank');
+                }
+            });
         }
-    
-        await Swal.fire({
-            title: fileName,
-            html: `
-                <div style="text-align: center; padding: 20px;">
-                    ${previewHtml}
-                </div>
-            `,
-            width: 700,
-            confirmButtonColor: '#000000',
-            confirmButtonText: 'Close',
-            showCancelButton: true,
-            cancelButtonText: 'Download',
-            cancelButtonColor: '#4A90E2'
-        }).then((result) => {
-            if (result.isDismissed) {
-                window.open(fileUrl, '_blank');
-            }
-        });
     }
-    
-    
-
 
     async deleteFile(fileName) {
         const confirmed = await this.uiManager.showConfirmation(
@@ -1183,11 +1232,9 @@ class ProfileApp {
             try {
                 this.uiManager.showLoading('Deleting file...');
                 
-                // Call the data service
                 const result = await this.dataService.deleteCV(fileName);
                 if (!result.success) throw new Error(result.message || 'Delete failed');
     
-                // Remove from local profile list and re-render
                 this.currentProfile.uploadedFiles = this.currentProfile.uploadedFiles.filter(
                     f => f.name !== fileName
                 );
@@ -1202,8 +1249,6 @@ class ProfileApp {
             }
         }
     }
-    
-    
 
     async logout() {
         const confirmed = await this.uiManager.showConfirmation(
@@ -1213,12 +1258,9 @@ class ProfileApp {
 
         if (confirmed) {
             this.uiManager.showLoading('Logging out...');
-            
-            // TODO: Add Supabase logout here
-            // await this.dataService.supabase.auth.signOut();
-            
+      
             setTimeout(() => {
-                window.location.href = "/login/HTML_Files/login.html";// Redirect to login page
+                window.location.href = "/login/HTML_Files/login.html";
             }, 1000);
         }
     }
@@ -1234,5 +1276,5 @@ document.addEventListener('DOMContentLoaded', () => {
     const loggedUser = JSON.parse(localStorage.getItem('loggedUser'));
 
     profileApp = new ProfileApp();
-    profileApp.init(loggedUser); // pass the logged-in user object
+    profileApp.init(loggedUser); 
 });

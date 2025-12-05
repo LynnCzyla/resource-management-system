@@ -1,140 +1,135 @@
-// RESOURCE MANAGEMENT (RM) dashboard.js
+// RESOURCE MANAGEMENT (RM) dashboard.js - OPTIMIZED
 import { supabase } from "../../supabaseClient.js";
 
-async function updateUserNameDisplayEnhanced() {
-    const userNameElement = document.getElementById('userName');
-    const userAvatarElement = document.querySelector('.user-avatar');
-    
-    if (!userNameElement) {
-        console.warn('[USER DISPLAY] userName element not found');
-        return;
+// ============================================
+// CONFIGURATION & CONSTANTS
+// ============================================
+const CONFIG = {
+    DEBOUNCE_DELAY: 300,
+    STANDARD_WORKWEEK: 40,
+    AVATAR_BASE_URL: 'https://ui-avatars.com/api/',
+    STATUS_COLORS: {
+        pending: { color: '#F5A623', bg: '#FFF4E6', text: 'Pending' },
+        ongoing: { color: '#4A90E2', bg: '#E3F2FD', text: 'Ongoing' },
+        completed: { color: '#7ED321', bg: '#E8F5E9', text: 'Completed' },
+        'on-hold': { color: '#9B9B9B', bg: '#F5F5F5', text: 'On Hold' },
+        cancelled: { color: '#E74C3C', bg: '#FFEBEE', text: 'Cancelled' }
+    },
+    PRIORITY_COLORS: {
+        low: { color: '#7ED321', bg: '#E8F5E9', text: 'Low' },
+        medium: { color: '#F5A623', bg: '#FFF4E6', text: 'Medium' },
+        high: { color: '#E74C3C', bg: '#FFEBEE', text: 'High' }
     }
+};
 
-    try {
-        const loggedUser = JSON.parse(localStorage.getItem('loggedUser') || '{}');
-        let displayName = '';
-        
-        if (loggedUser.name) {
-            displayName = loggedUser.name;
-            userNameElement.textContent = displayName;
-            console.log('[USER DISPLAY] User name updated to:', displayName);
-        } else if (loggedUser.email) {
-            try {
-                const { data: userData, error } = await supabase
-                    .from('users')
-                    .select('name')
-                    .eq('email', loggedUser.email)
-                    .single();
-                
-                if (!error && userData && userData.name) {
-                    displayName = userData.name;
-                    userNameElement.textContent = displayName;
-                    loggedUser.name = userData.name;
-                    localStorage.setItem('loggedUser', JSON.stringify(loggedUser));
-                    console.log('[USER DISPLAY] User name fetched from Supabase:', displayName);
-                } else {
-                    displayName = loggedUser.email.split('@')[0];
-                    userNameElement.textContent = displayName;
-                }
-            } catch (dbError) {
-                console.error('[USER DISPLAY] Error fetching from Supabase:', dbError);
-                displayName = loggedUser.email.split('@')[0];
-                userNameElement.textContent = displayName;
-            }
-        } else {
-            displayName = 'Project Manager';
-            userNameElement.textContent = displayName;
-            console.warn('[USER DISPLAY] No user information found');
-        }
-        
-        // Update avatar with user initials
-        if (userAvatarElement && displayName) {
-            const initials = displayName.split(' ')
-                .map(word => word.charAt(0).toUpperCase())
-                .join('')
-                .substring(0, 2);
-            
-            userAvatarElement.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=000&color=fff`;
-            userAvatarElement.alt = initials;
-            console.log('[USER DISPLAY] Avatar updated with initials:', initials);
-        }
-    } catch (error) {
-        console.error('[USER DISPLAY] Error updating user name:', error);
-        userNameElement.textContent = 'Project Manager';
-    }
-}
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
+const Utils = {
+    debounce(func, delay = CONFIG.DEBOUNCE_DELAY) {
+        let timeoutId;
+        return (...args) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => func.apply(this, args), delay);
+        };
+    },
 
-function debounce(func, delay = 300) {
-    let timeoutId;
-    return function (...args) {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func.apply(this, args), delay);
-    };
-}
+    parseUser() {
+        try {
+            return JSON.parse(localStorage.getItem('loggedUser') || '{}');
+        } catch {
+            return {};
+        }
+    },
+
+    getInitials(name) {
+        return name.split(' ')
+            .map(word => word.charAt(0).toUpperCase())
+            .join('')
+            .substring(0, 2);
+    },
+
+    formatDate(date) {
+        return date.toISOString().split('T')[0];
+    },
+
+    isValidProfilePic(pic) {
+        return pic && pic.trim() && pic !== 'null' && pic !== 'undefined';
+    },
+
+    generateAvatar(name, background = '000', color = 'fff') {
+        return `${CONFIG.AVATAR_BASE_URL}?name=${encodeURIComponent(name)}&background=${background}&color=${color}`;
+    }
+};
 
 // ============================================
-// DASHBOARD APP FOR LOGOUT
+// USER DISPLAY MANAGER
 // ============================================
-
-class DashboardApp {
-    setupLogoutListeners() {
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.openLogoutModal());
-        }
-
-        const cancelLogoutBtn = document.getElementById('cancelLogout');
-        const confirmLogoutBtn = document.getElementById('confirmLogout');
-
-        if (cancelLogoutBtn) {
-            cancelLogoutBtn.addEventListener('click', () => ModalManager.hide('logoutModal'));
-        }
-        if (confirmLogoutBtn) {
-            confirmLogoutBtn.addEventListener('click', () => this.handleLogout());
-        }
+const UserDisplay = {
+    async update() {
+        const userNameElement = document.getElementById('userName');
+        const userAvatarElement = document.querySelector('.user-avatar');
         
-        this.setupWorklogModalListeners();
-    }
-    
-    setupWorklogModalListeners() {
-        const closeWorklogModal = document.getElementById('closeWorklogModal');
-        if (closeWorklogModal) {
-            closeWorklogModal.addEventListener('click', () => ModalManager.hide('worklogModal'));
+        if (!userNameElement) {
+            console.warn('[USER] User name element not found');
+            return;
         }
-        
-        const worklogModal = document.getElementById('worklogModal');
-        if (worklogModal) {
-            worklogModal.addEventListener('click', (e) => {
-                if (e.target === worklogModal) {
-                    ModalManager.hide('worklogModal');
-                }
-            });
+
+        try {
+            const loggedUser = Utils.parseUser();
+            let displayName = 'Project Manager';
+
+            if (loggedUser.name) {
+                displayName = loggedUser.name;
+                userNameElement.textContent = displayName;
+            } else if (loggedUser.email) {
+                displayName = await this.fetchUserName(loggedUser.email) || 
+                             loggedUser.email.split('@')[0];
+                userNameElement.textContent = displayName;
+            }
+
+            userNameElement.textContent = displayName;
+            
+            if (userAvatarElement) {
+                this.updateAvatar(userAvatarElement, displayName);
+            }
+
+        } catch (error) {
+            console.error('[USER] Error:', error);
+            userNameElement.textContent = 'Project Manager';
         }
-    }
+    },
 
-    openLogoutModal() {
-        ModalManager.show('logoutModal');
-    }
+    async fetchUserName(email) {
+        try {
+            const { data: userData, error } = await supabase
+                .from('users')
+                .select('name')
+                .eq('email', email)
+                .single();
 
-    handleLogout() {
-        localStorage.removeItem('loggedUser');
-        sessionStorage.clear();
-        ModalManager.hide('logoutModal');
-        ModalManager.showLoading();
-        
-        setTimeout(() => {
-            window.location.href = "/login/HTML_Files/login.html";
-        }, 500);
+            if (!error && userData?.name) {
+                const loggedUser = Utils.parseUser();
+                loggedUser.name = userData.name;
+                localStorage.setItem('loggedUser', JSON.stringify(loggedUser));
+                return userData.name;
+            }
+        } catch (error) {
+            console.error('[USER] Fetch error:', error);
+        }
+        return null;
+    },
+
+    updateAvatar(element, name) {
+        const initials = Utils.getInitials(name);
+        element.src = Utils.generateAvatar(name);
+        element.alt = initials;
     }
-}
+};
 
 // ============================================
 // MODAL MANAGER
 // ============================================
-
 class ModalManager {
     static show(modalId) {
         const modal = document.getElementById(modalId);
@@ -164,7 +159,6 @@ class ModalManager {
 // ============================================
 // MESSAGE MANAGER
 // ============================================
-
 class MessageManager {
     static show(message, type = 'info') {
         let container = document.getElementById('messageContainer');
@@ -177,7 +171,7 @@ class MessageManager {
         const messageBox = document.createElement('div');
         messageBox.className = `message-box ${type}`;
 
-        const iconMap = {
+        const icons = {
             success: 'fa-check-circle',
             error: 'fa-exclamation-circle',
             warning: 'fa-exclamation-triangle',
@@ -185,192 +179,160 @@ class MessageManager {
         };
 
         messageBox.innerHTML = `
-            <i class="fas ${iconMap[type]}"></i>
+            <i class="fas ${icons[type]}"></i>
             <span>${message}</span>
             <button class="message-close"><i class="fas fa-times"></i></button>
         `;
 
-        const closeBtn = messageBox.querySelector('.message-close');
-        closeBtn.addEventListener('click', () => messageBox.remove());
-
+        messageBox.querySelector('.message-close').addEventListener('click', () => messageBox.remove());
         container.appendChild(messageBox);
 
+        setTimeout(() => messageBox.remove(), 5000);
+    }
+
+    static success(message) { this.show(message, 'success'); }
+    static error(message) { this.show(message, 'error'); }
+    static warning(message) { this.show(message, 'warning'); }
+    static info(message) { this.show(message, 'info'); }
+}
+
+// ============================================
+// DASHBOARD APP
+// ============================================
+class DashboardApp {
+    constructor() {
+        this.setupLogoutListeners();
+        this.setupWorklogModalListeners();
+    }
+
+    setupLogoutListeners() {
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => ModalManager.show('logoutModal'));
+        }
+
+        const cancelLogoutBtn = document.getElementById('cancelLogout');
+        const confirmLogoutBtn = document.getElementById('confirmLogout');
+
+        if (cancelLogoutBtn) {
+            cancelLogoutBtn.addEventListener('click', () => ModalManager.hide('logoutModal'));
+        }
+        if (confirmLogoutBtn) {
+            confirmLogoutBtn.addEventListener('click', () => this.handleLogout());
+        }
+    }
+
+    setupWorklogModalListeners() {
+        const closeWorklogModal = document.getElementById('closeWorklogModal');
+        if (closeWorklogModal) {
+            closeWorklogModal.addEventListener('click', () => ModalManager.hide('worklogModal'));
+        }
+        
+        const worklogModal = document.getElementById('worklogModal');
+        if (worklogModal) {
+            worklogModal.addEventListener('click', (e) => {
+                if (e.target === worklogModal) {
+                    ModalManager.hide('worklogModal');
+                }
+            });
+        }
+    }
+
+    handleLogout() {
+        localStorage.removeItem('loggedUser');
+        sessionStorage.clear();
+        ModalManager.hide('logoutModal');
+        ModalManager.showLoading();
+        
         setTimeout(() => {
-            messageBox.remove();
-        }, 5000);
-    }
-
-    static success(message) {
-        this.show(message, 'success');
-    }
-
-    static error(message) {
-        this.show(message, 'error');
-    }
-
-    static warning(message) {
-        this.show(message, 'warning');
-    }
-
-    static info(message) {
-        this.show(message, 'info');
+            window.location.href = "/login/HTML_Files/login.html";
+        }, 500);
     }
 }
 
 // ============================================
-// PROJECT TIMELINE SERVICE - WITH PROFILE PICTURES
+// PROJECT TIMELINE SERVICE
 // ============================================
-
 class ProjectTimelineService {
     async getAllProjectsWithResources(selectedDate = new Date()) {
         try {
-            console.log('[PROJECT TIMELINE] Starting data fetch...');
-            const dateStr = selectedDate.toISOString().split('T')[0];
-            console.log('[PROJECT TIMELINE] Selected date:', dateStr);
-            
-            const { data: projects, error: projectError } = await supabase
-                .from('projects')
-                .select(`
-                    *,
-                    created_by_user:users!projects_created_by_fkey(
-                        id, 
-                        name, 
-                        email,
-                        user_details(profile_pic)
-                    )
-                `)
-                .in('status', ['pending', 'ongoing']);
+            console.log('[TIMELINE] Fetching data...');
+            ModalManager.showLoading();
 
-            if (projectError) throw projectError;
-            console.log('[PROJECT TIMELINE] Projects fetched:', projects?.length || 0);
+            const [projects, assignments, worklogs] = await Promise.all([
+                this.fetchProjects(),
+                this.fetchAssignments(),
+                this.fetchWorklogs()
+            ]);
 
-            const { data: assignments, error: assignError } = await supabase
-                .from('project_assignments')
-                .select(`
-                    id,
-                    project_id,
-                    user_id,
-                    role_in_project,
-                    status,
-                    assigned_hours,
-                    allocation_percent,
-                    assignment_type
-                `)
-                .eq('status', 'assigned');
+            const userIds = [...new Set(assignments.map(a => a.user_id))];
+            const users = await this.fetchUsers(userIds);
 
-            if (assignError) throw assignError;
-            console.log('[PROJECT TIMELINE] Assignments fetched:', assignments?.length || 0);
-
-            const userIds = [...new Set(assignments?.map(a => a.user_id) || [])];
-            
-            const { data: users, error: userError } = await supabase
-                .from('users')
-                .select(`
-                    id, 
-                    name, 
-                    email,
-                    user_details(status, total_available_hours, profile_pic)
-                `)
-                .in('id', userIds);
-                
-            if (userError) console.error('[PROJECT TIMELINE] User fetch error:', userError);
-            console.log('[PROJECT TIMELINE] Users fetched:', users?.length || 0);
-
-            const { data: worklogs, error: worklogError } = await supabase
-                .from('worklogs')
-                .select('user_id, project_id, log_date, hours, work_type, work_description, status');
-
-            if (worklogError) throw worklogError;
-            console.log('[PROJECT TIMELINE] Worklogs fetched:', worklogs?.length || 0);
-
-            const processedProjects = this.processProjectData(
-                projects || [], 
-                assignments || [], 
-                users || [],
-                worklogs || [], 
-                selectedDate
-            );
-            
-            console.log('[PROJECT TIMELINE] Processed projects:', processedProjects.length);
-            return processedProjects;
+            ModalManager.hideLoading();
+            return this.processProjectData(projects, assignments, users, worklogs, selectedDate);
 
         } catch (error) {
-            console.error('[PROJECT TIMELINE] Error in getAllProjectsWithResources:', error);
+            console.error('[TIMELINE] Error:', error);
+            ModalManager.hideLoading();
             return [];
         }
     }
 
-    processProjectData(projects, assignments, users, worklogs, selectedDate) {
-        console.log('[PROJECT TIMELINE] Processing project data...');
-        
-        const userMap = {};
-        users.forEach(user => {
-            const userDetails = user.user_details?.[0];
-            const profilePic = userDetails?.profile_pic;
-            const hasValidProfilePic = profilePic && 
-                                      profilePic.trim() !== '' && 
-                                      profilePic !== 'null' && 
-                                      profilePic !== 'undefined';
-            
-            userMap[user.id] = {
-                ...user,
-                status: userDetails?.status || 'Available',
-                total_available_hours: userDetails?.total_available_hours || 40,
-                avatar: hasValidProfilePic
-                    ? profilePic
-                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4A90E2&color=fff`
-            };
-        });
+    async fetchProjects() {
+        const { data, error } = await supabase
+            .from('projects')
+            .select(`
+                *,
+                created_by_user:users!projects_created_by_fkey(
+                    id, name, email,
+                    user_details(profile_pic)
+                )
+            `)
+            .in('status', ['pending', 'ongoing']);
 
-        const userTotalAssignedHours = {};
-        assignments.forEach(assignment => {
-            if (!userTotalAssignedHours[assignment.user_id]) {
-                userTotalAssignedHours[assignment.user_id] = 0;
-            }
-            userTotalAssignedHours[assignment.user_id] += parseInt(assignment.assigned_hours || 0);
-        });
-        
+        if (error) throw error;
+        return data || [];
+    }
+
+    async fetchAssignments() {
+        const { data, error } = await supabase
+            .from('project_assignments')
+            .select('id, project_id, user_id, role_in_project, assigned_hours')
+            .eq('status', 'assigned');
+
+        if (error) throw error;
+        return data || [];
+    }
+
+    async fetchUsers(userIds) {
+        if (userIds.length === 0) return [];
+
+        const { data, error } = await supabase
+            .from('users')
+            .select('id, name, email, user_details(status, total_available_hours, profile_pic)')
+            .in('id', userIds);
+
+        if (error) console.error('[TIMELINE] User fetch error:', error);
+        return data || [];
+    }
+
+    async fetchWorklogs() {
+        const { data, error } = await supabase
+            .from('worklogs')
+            .select('user_id, project_id, log_date, hours, work_type, work_description, status');
+
+        if (error) throw error;
+        return data || [];
+    }
+
+    processProjectData(projects, assignments, users, worklogs, selectedDate) {
+        const userMap = this.createUserMap(users);
+        const userTotalAssignedHours = this.calculateUserAssignedHours(assignments);
+
         return projects.map(project => {
             const projectAssignments = assignments.filter(a => a.project_id === project.id);
             const projectWorklogs = worklogs.filter(w => w.project_id === project.id);
-            const projectManager = project.created_by_user || null;
-
-            // Get PM profile picture
-            let pmAvatar;
-            if (projectManager) {
-                const pmDetails = projectManager.user_details?.[0];
-                const pmProfilePic = pmDetails?.profile_pic;
-                const hasValidPMPic = pmProfilePic && 
-                                     pmProfilePic.trim() !== '' && 
-                                     pmProfilePic !== 'null' && 
-                                     pmProfilePic !== 'undefined';
-                
-                pmAvatar = hasValidPMPic
-                    ? pmProfilePic
-                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(projectManager.name)}&background=9013FE&color=fff`;
-            }
-
-            const teamMembers = projectAssignments.map(assignment => {
-                const user = userMap[assignment.user_id];
-                const memberWorklogs = projectWorklogs.filter(w => w.user_id === assignment.user_id);
-                
-                const totalAssignedHours = userTotalAssignedHours[assignment.user_id] || 0;
-                const totalAvailableHours = user?.total_available_hours || 40;
-                
-                return {
-                    userId: assignment.user_id,
-                    name: user?.name || 'Unknown',
-                    email: user?.email || '',
-                    role: assignment.role_in_project || 'Team Member',
-                    assignedHours: totalAssignedHours,
-                    totalAvailableHours: totalAvailableHours,
-                    assignmentType: assignment.assignment_type || 'Full-Time',
-                    avatar: user?.avatar || `https://ui-avatars.com/api/?name=User&background=4A90E2&color=fff`,
-                    dailyHours: this.calculateDailyHours(memberWorklogs),
-                    dailyWorklogs: this.organizeDailyWorklogs(memberWorklogs),
-                    totalHours: memberWorklogs.reduce((sum, w) => sum + parseFloat(w.hours || 0), 0)
-                };
-            });
+            const projectManager = project.created_by_user;
 
             return {
                 id: project.id,
@@ -378,60 +340,175 @@ class ProjectTimelineService {
                 description: project.description,
                 startDate: new Date(project.start_date),
                 endDate: project.end_date ? new Date(project.end_date) : null,
-                duration: project.duration_days || this.calculateDuration(project.start_date, project.end_date),
                 status: project.status,
                 priority: project.priority,
-                projectManager: projectManager ? {
-                    id: projectManager.id,
-                    name: projectManager.name,
-                    email: projectManager.email,
-                    avatar: pmAvatar
-                } : null,
-                teamMembers,
-                totalTeamSize: teamMembers.length
+                projectManager: projectManager ? this.processProjectManager(projectManager) : null,
+                teamMembers: this.processTeamMembers(projectAssignments, userMap, projectWorklogs, userTotalAssignedHours),
+                totalTeamSize: projectAssignments.length
+            };
+        });
+    }
+
+    createUserMap(users) {
+        const map = {};
+        users.forEach(user => {
+            const details = user.user_details?.[0];
+            const profilePic = details?.profile_pic;
+            
+            map[user.id] = {
+                ...user,
+                status: details?.status || 'Available',
+                total_available_hours: details?.total_available_hours || CONFIG.STANDARD_WORKWEEK,
+                avatar: Utils.isValidProfilePic(profilePic)
+                    ? profilePic
+                    : Utils.generateAvatar(user.name, '4A90E2', 'fff')
+            };
+        });
+        return map;
+    }
+
+    calculateUserAssignedHours(assignments) {
+        const hours = {};
+        assignments.forEach(assignment => {
+            hours[assignment.user_id] = (hours[assignment.user_id] || 0) + 
+                                       parseInt(assignment.assigned_hours || 0);
+        });
+        return hours;
+    }
+
+    processProjectManager(manager) {
+        const details = manager.user_details?.[0];
+        const profilePic = details?.profile_pic;
+        
+        return {
+            id: manager.id,
+            name: manager.name,
+            email: manager.email,
+            avatar: Utils.isValidProfilePic(profilePic)
+                ? profilePic
+                : Utils.generateAvatar(manager.name, '9013FE', 'fff')
+        };
+    }
+
+    processTeamMembers(assignments, userMap, worklogs, userTotalAssignedHours) {
+        return assignments.map(assignment => {
+            const user = userMap[assignment.user_id];
+            const memberWorklogs = worklogs.filter(w => w.user_id === assignment.user_id);
+            const assignedHours = userTotalAssignedHours[assignment.user_id] || 0;
+            const totalAvailableHours = user?.total_available_hours || CONFIG.STANDARD_WORKWEEK;
+
+            return {
+                userId: assignment.user_id,
+                name: user?.name || 'Unknown',
+                email: user?.email || '',
+                role: assignment.role_in_project || 'Team Member',
+                assignedHours,
+                totalAvailableHours,
+                avatar: user?.avatar || Utils.generateAvatar('User', '4A90E2', 'fff'),
+                dailyHours: this.calculateDailyHours(memberWorklogs),
+                dailyWorklogs: this.organizeDailyWorklogs(memberWorklogs),
+                totalHours: memberWorklogs.reduce((sum, w) => sum + parseFloat(w.hours || 0), 0)
             };
         });
     }
 
     calculateDailyHours(worklogs) {
         const dailyHours = {};
-        
         worklogs.forEach(log => {
-            const logDate = new Date(log.log_date).toISOString().split('T')[0];
-            if (!dailyHours[logDate]) {
-                dailyHours[logDate] = 0;
-            }
-            dailyHours[logDate] += parseFloat(log.hours || 0);
+            const dateStr = Utils.formatDate(new Date(log.log_date));
+            dailyHours[dateStr] = (dailyHours[dateStr] || 0) + parseFloat(log.hours || 0);
         });
-
         return dailyHours;
     }
 
     organizeDailyWorklogs(worklogs) {
         const dailyWorklogs = {};
-        
         worklogs.forEach(log => {
-            const logDate = new Date(log.log_date).toISOString().split('T')[0];
-            if (!dailyWorklogs[logDate]) {
-                dailyWorklogs[logDate] = [];
-            }
-            dailyWorklogs[logDate].push({
+            const dateStr = Utils.formatDate(new Date(log.log_date));
+            if (!dailyWorklogs[dateStr]) dailyWorklogs[dateStr] = [];
+            dailyWorklogs[dateStr].push({
                 hours: parseFloat(log.hours || 0),
                 workType: log.work_type || 'General',
                 description: log.work_description || 'No description',
                 status: log.status || 'in progress'
             });
         });
-
         return dailyWorklogs;
     }
 
-    calculateDuration(startDate, endDate) {
-        if (!endDate) return null;
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const diffTime = Math.abs(end - start);
-        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    async getStats(selectedDate = new Date()) {
+        try {
+            const [totalEmployees, activeProjects, assignments] = await Promise.all([
+                this.getEmployeeCount(),
+                this.getActiveProjectCount(),
+                this.getAssignments()
+            ]);
+
+            return this.calculateAvailabilityStats(totalEmployees, assignments);
+
+        } catch (error) {
+            console.error('[STATS] Error:', error);
+            return this.getDefaultStats();
+        }
+    }
+
+    async getEmployeeCount() {
+        const { count, error } = await supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'employee');
+        return error ? 0 : count;
+    }
+
+    async getActiveProjectCount() {
+        const { count, error } = await supabase
+            .from('projects')
+            .select('*', { count: 'exact', head: true })
+            .in('status', ['pending', 'ongoing']);
+        return error ? 0 : count;
+    }
+
+    async getAssignments() {
+        const { data, error } = await supabase
+            .from('project_assignments')
+            .select('user_id, assigned_hours')
+            .eq('status', 'assigned');
+        return error ? [] : data || [];
+    }
+
+    calculateAvailabilityStats(totalEmployees, assignments) {
+        const userAssignedHours = {};
+        assignments.forEach(assignment => {
+            userAssignedHours[assignment.user_id] = 
+                (userAssignedHours[assignment.user_id] || 0) + 
+                parseInt(assignment.assigned_hours || 0);
+        });
+
+        let available = 0, partial = 0, busy = 0;
+
+        Object.values(userAssignedHours).forEach(hours => {
+            if (hours === 0 || hours <= 20) available++;
+            else if (hours >= 40) busy++;
+            else partial++;
+        });
+
+        return {
+            totalEmployees,
+            activeProjects: assignments.length > 0 ? Math.ceil(assignments.length / 3) : 0,
+            available,
+            partial,
+            full: busy
+        };
+    }
+
+    getDefaultStats() {
+        return {
+            totalEmployees: 0,
+            activeProjects: 0,
+            available: 0,
+            partial: 0,
+            full: 0
+        };
     }
 
     getDateRange(period, selectedDate) {
@@ -462,86 +539,11 @@ class ProjectTimelineService {
 
         return dates;
     }
-
-    async getStats(selectedDate = new Date()) {
-        try {
-            const { count: totalEmployees, error: empError } = await supabase
-                .from('users')
-                .select('*', { count: 'exact', head: true })
-                .eq('role', 'employee');
-
-            if (empError) throw empError;
-
-            const { count: activeProjects, error: projError } = await supabase
-                .from('projects')
-                .select('*', { count: 'exact', head: true })
-                .in('status', ['pending', 'ongoing']);
-
-            if (projError) throw projError;
-
-            const { data: assignments, error: assignError } = await supabase
-                .from('project_assignments')
-                .select('user_id, assigned_hours')
-                .eq('status', 'assigned');
-
-            if (assignError) throw assignError;
-
-            const userAssignedHours = {};
-            assignments?.forEach(assignment => {
-                if (!userAssignedHours[assignment.user_id]) {
-                    userAssignedHours[assignment.user_id] = 0;
-                }
-                userAssignedHours[assignment.user_id] += parseInt(assignment.assigned_hours || 0);
-            });
-
-            let available = 0;
-            let partial = 0;
-            let busy = 0;
-
-            const { data: allEmployees, error: allEmpError } = await supabase
-                .from('users')
-                .select('id')
-                .eq('role', 'employee');
-
-            if (allEmpError) throw allEmpError;
-
-            allEmployees?.forEach(emp => {
-                const assignedHours = userAssignedHours[emp.id] || 0;
-                
-                if (assignedHours === 0 || assignedHours <= 20) {
-                    available++;
-                } else if (assignedHours >= 40) {
-                    busy++;
-                } else {
-                    partial++;
-                }
-            });
-
-            return {
-                totalEmployees: totalEmployees || 0,
-                activeProjects: activeProjects || 0,
-                available,
-                partial,
-                full: busy
-            };
-
-        } catch (error) {
-            console.error('[STATS] Error fetching stats:', error);
-            return {
-                totalEmployees: 0,
-                activeProjects: 0,
-                available: 0,
-                partial: 0,
-                full: 0
-            };
-        }
-    }
 }
 
 // ============================================
-// PROJECT TIMELINE UI RENDERER
+// PROJECT TIMELINE RENDERER
 // ============================================
-
 class ProjectTimelineRenderer {
     constructor(timelineService) {
         this.timelineService = timelineService;
@@ -550,27 +552,22 @@ class ProjectTimelineRenderer {
         this.currentPeriod = 'week';
         this.selectedDate = new Date();
         this.searchQuery = '';
+        this.cache = new Map();
     }
 
     async loadProjects() {
         try {
-            console.log('[RENDERER] Loading projects...');
-            ModalManager.showLoading();
-            
             this.projects = await this.timelineService.getAllProjectsWithResources(this.selectedDate);
             this.filteredProjects = [...this.projects];
             
-            console.log('[RENDERER] Projects loaded:', this.projects.length);
-            
-            ModalManager.hideLoading();
-            
-            await updateUserNameDisplayEnhanced();
-            await this.updateStats();
-            this.renderProjectTimeline();
-            
+            await Promise.all([
+                UserDisplay.update(),
+                this.updateStats(),
+                this.renderProjectTimeline()
+            ]);
+
         } catch (error) {
-            console.error('[RENDERER] Error loading projects:', error);
-            ModalManager.hideLoading();
+            console.error('[RENDERER] Error:', error);
             MessageManager.error('Failed to load project data');
         }
     }
@@ -578,73 +575,59 @@ class ProjectTimelineRenderer {
     async updateStats() {
         try {
             const stats = await this.timelineService.getStats(this.selectedDate);
-            
             const elements = {
-                totalEmployees: document.getElementById('totalEmployees'),
-                totalProjects: document.getElementById('totalProjects'),
-                availableEmployees: document.getElementById('availableEmployees'),
-                partialEmployees: document.getElementById('partialEmployees'),
-                fullyAllocated: document.getElementById('fullyAllocated')
+                totalEmployees: 'totalEmployees',
+                totalProjects: 'totalProjects',
+                availableEmployees: 'availableEmployees',
+                partialEmployees: 'partialEmployees',
+                fullyAllocated: 'fullyAllocated'
             };
 
-            if (elements.totalEmployees) elements.totalEmployees.textContent = stats.totalEmployees;
-            if (elements.totalProjects) elements.totalProjects.textContent = stats.activeProjects;
-            if (elements.availableEmployees) elements.availableEmployees.textContent = stats.available;
-            if (elements.partialEmployees) elements.partialEmployees.textContent = stats.partial;
-            if (elements.fullyAllocated) elements.fullyAllocated.textContent = stats.full;
+            Object.entries(elements).forEach(([key, id]) => {
+                const element = document.getElementById(id);
+                if (element) element.textContent = stats[key];
+            });
 
-            console.log('[RENDERER] Stats updated:', stats);
         } catch (error) {
-            console.error('[RENDERER] Error updating stats:', error);
+            console.error('[RENDERER] Stats error:', error);
         }
     }
 
     filterProjects() {
-        this.filteredProjects = this.projects.filter(project => {
-            const matchesSearch = project.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                                project.teamMembers.some(member => 
-                                    member.name.toLowerCase().includes(this.searchQuery.toLowerCase())
-                                ) ||
-                                (project.projectManager && project.projectManager.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
-            return matchesSearch;
-        });
+        const query = this.searchQuery.toLowerCase();
+        this.filteredProjects = this.projects.filter(project => 
+            project.name.toLowerCase().includes(query) ||
+            project.teamMembers.some(member => member.name.toLowerCase().includes(query)) ||
+            (project.projectManager && project.projectManager.name.toLowerCase().includes(query))
+        );
         this.renderProjectTimeline();
     }
 
     renderProjectTimeline() {
-        console.log('[RENDERER] Rendering timeline...');
         const timelineRows = document.getElementById('timelineRows');
         const timelineDates = document.getElementById('timelineDates');
 
         if (!timelineRows || !timelineDates) {
-            console.error('[RENDERER] Timeline containers not found!');
+            console.error('[RENDERER] Containers not found!');
             return;
         }
 
         timelineRows.innerHTML = '';
         timelineDates.innerHTML = '';
 
-        this.renderDateHeaders(timelineDates);
-
         if (this.filteredProjects.length === 0) {
-            timelineRows.innerHTML = `
-                <div style="padding: 40px; text-align: center; color: #6c757d; grid-column: 1 / -1;">
-                    <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
-                    <p style="font-size: 16px;">No projects found</p>
-                    <p style="font-size: 14px;">Create projects or adjust your filters</p>
-                </div>
-            `;
+            timelineRows.innerHTML = this.getNoProjectsHTML();
             return;
         }
 
+        this.renderDateHeaders(timelineDates);
+        
         const fragment = document.createDocumentFragment();
         this.filteredProjects.forEach(project => {
-            const projectRow = this.createProjectRow(project);
-            fragment.appendChild(projectRow);
+            fragment.appendChild(this.createProjectRow(project));
         });
-
+        
         timelineRows.appendChild(fragment);
-        console.log('[RENDERER] Timeline rendered successfully');
     }
 
     renderDateHeaders(container) {
@@ -670,9 +653,7 @@ class ProjectTimelineRenderer {
                     <div style="font-size: 12px; color: #6c757d;">${date.getDate()}</div>
                 `;
             } else {
-                cell.innerHTML = `
-                    <div style="font-weight: 600; font-size: 14px;">${date.getDate()}</div>
-                `;
+                cell.innerHTML = `<div style="font-weight: 600; font-size: 14px;">${date.getDate()}</div>`;
             }
             
             container.appendChild(cell);
@@ -684,22 +665,19 @@ class ProjectTimelineRenderer {
         rowContainer.className = 'project-row-container';
 
         const projectHeader = this.createProjectHeader(project);
-        rowContainer.appendChild(projectHeader);
-
         const teamRows = document.createElement('div');
         teamRows.className = 'team-member-rows';
         teamRows.style.display = 'none';
 
         if (project.projectManager) {
-            const managerRow = this.createProjectManagerRow(project.projectManager, project);
-            teamRows.appendChild(managerRow);
+            teamRows.appendChild(this.createProjectManagerRow(project.projectManager));
         }
 
         project.teamMembers.forEach(member => {
-            const memberRow = this.createTeamMemberRow(member, project);
-            teamRows.appendChild(memberRow);
+            teamRows.appendChild(this.createTeamMemberRow(member, project));
         });
 
+        rowContainer.appendChild(projectHeader);
         rowContainer.appendChild(teamRows);
 
         projectHeader.addEventListener('click', () => {
@@ -718,7 +696,6 @@ class ProjectTimelineRenderer {
 
     createProjectHeader(project) {
         const dateRange = this.timelineService.getDateRange(this.currentPeriod, this.selectedDate);
-        
         const row = document.createElement('div');
         row.className = 'timeline-row project-header-row';
 
@@ -745,17 +722,14 @@ class ProjectTimelineRenderer {
         row.appendChild(projectCell);
 
         dateRange.forEach(() => {
-            const cell = document.createElement('div');
-            cell.className = 'workload-cell';
-            row.appendChild(cell);
+            row.appendChild(document.createElement('div')).className = 'workload-cell';
         });
 
         return row;
     }
 
-    createProjectManagerRow(manager, project) {
+    createProjectManagerRow(manager) {
         const dateRange = this.timelineService.getDateRange(this.currentPeriod, this.selectedDate);
-        
         const row = document.createElement('div');
         row.className = 'timeline-row team-member-row manager-row';
 
@@ -785,13 +759,11 @@ class ProjectTimelineRenderer {
 
     createTeamMemberRow(member, project) {
         const dateRange = this.timelineService.getDateRange(this.currentPeriod, this.selectedDate);
-        
         const row = document.createElement('div');
         row.className = 'timeline-row team-member-row';
 
         const assignedHours = member.assignedHours || 0;
-        const totalAvailableHours = member.totalAvailableHours || 40;
-        const availabilityStatus = this.getAvailabilityStatus(assignedHours, totalAvailableHours);
+        const availabilityStatus = this.getAvailabilityStatus(assignedHours);
 
         const memberCell = document.createElement('div');
         memberCell.className = 'employee-cell';
@@ -810,12 +782,11 @@ class ProjectTimelineRenderer {
         row.appendChild(memberCell);
 
         dateRange.forEach(date => {
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = Utils.formatDate(date);
             const hours = member.dailyHours[dateStr] || 0;
             const worklogs = member.dailyWorklogs[dateStr] || [];
             
-            const cell = this.createHoursCell(hours, worklogs, member, dateStr, project);
-            row.appendChild(cell);
+            row.appendChild(this.createHoursCell(hours, worklogs, member, dateStr, project));
         });
 
         return row;
@@ -825,50 +796,103 @@ class ProjectTimelineRenderer {
         const cell = document.createElement('div');
         cell.className = 'workload-cell';
         
-        if (hours > 0) {
+        if (worklogs.length > 0) {
             cell.style.cursor = 'pointer';
+            const display = this.createHoursDisplay(hours, worklogs);
+            cell.appendChild(display);
             
-            const hoursDisplay = document.createElement('div');
-            hoursDisplay.style.cssText = `
-                padding: 6px 12px;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: 600;
-                background: ${this.getHoursBackgroundColor(hours)};
-                color: ${this.getHoursTextColor(hours)};
-                display: inline-block;
-                transition: all 0.2s ease;
-            `;
-            hoursDisplay.textContent = `${hours.toFixed(1)}h`;
-            
-            hoursDisplay.addEventListener('mouseenter', () => {
-                hoursDisplay.style.transform = 'scale(1.05)';
-                hoursDisplay.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-            });
-            
-            hoursDisplay.addEventListener('mouseleave', () => {
-                hoursDisplay.style.transform = 'scale(1)';
-                hoursDisplay.style.boxShadow = 'none';
-            });
-            
-            cell.appendChild(hoursDisplay);
-
             cell.addEventListener('click', () => {
                 this.showWorklogModal(member, dateStr, worklogs, project);
             });
-        } else {
-            cell.innerHTML = '<span style="color: #dee2e6; font-size: 18px;">—</span>';
         }
-
+        
         return cell;
+    }
+
+    createHoursDisplay(hours, worklogs) {
+        const workTypes = worklogs.map(log => log.workType.toLowerCase());
+        const isAbsent = workTypes.includes('absent');
+        const isLeave = workTypes.includes('leave');
+        const isHoliday = workTypes.includes('holiday');
+
+        const display = document.createElement('div');
+        
+        if (isAbsent) {
+            display.style.cssText = `
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                background: #f5f5f5;
+                color: #757575;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                transition: all 0.2s ease;
+            `;
+            display.innerHTML = `
+                <div style="font-size: 16px; color: #9e9e9e;">---</div>
+                <div style="font-size: 11px; font-weight: 600; color: #757575;">Absent</div>
+            `;
+        } else if (isHoliday || isLeave) {
+            const type = isHoliday ? 'Holiday' : 'Leave';
+            display.style.cssText = `
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                background: #e8f5e9;
+                color: #2e7d32;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                transition: all 0.2s ease;
+            `;
+            display.innerHTML = `
+                <div style="font-size: 16px;">8h</div>
+                <div style="font-size: 11px; font-weight: 600; color: #1b5e20;">${type}</div>
+            `;
+        } else if (hours > 8) {
+            display.style.cssText = `
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                background: #ffebee;
+                color: #c62828;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 4px;
+                transition: all 0.2s ease;
+            `;
+            const overtimeHours = hours - 8;
+            display.innerHTML = `
+                <div style="font-size: 16px;">${hours.toFixed(1)}h</div>
+                <div style="font-size: 11px; font-weight: 600; color: #b71c1c;">+${overtimeHours.toFixed(1)}h OT</div>
+            `;
+        } else if (hours > 0) {
+            display.style.cssText = `
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: 600;
+                background: #e3f2fd;
+                color: #1976d2;
+                display: inline-block;
+                transition: all 0.2s ease;
+            `;
+            display.textContent = hours === 8 ? '8h' : `${hours.toFixed(1)}h`;
+        }
+        
+        return display;
     }
 
     showWorklogModal(member, dateStr, worklogs, project) {
         const modal = document.getElementById('worklogModal');
-        if (!modal) {
-            console.error('Worklog modal not found');
-            return;
-        }
+        if (!modal) return;
 
         const employeeName = document.getElementById('worklogEmployeeName');
         const workDate = document.getElementById('worklogDate');
@@ -911,96 +935,60 @@ class ProjectTimelineRenderer {
             const totalHours = worklogs.reduce((sum, log) => sum + log.hours, 0);
             const totalItem = document.createElement('div');
             totalItem.className = 'worklog-total';
-            totalItem.innerHTML = `
-                <strong>Total Hours:</strong> ${totalHours.toFixed(1)}h
-            `;
+            totalItem.innerHTML = `<strong>Total Hours:</strong> ${totalHours.toFixed(1)}h`;
             worklogList.appendChild(totalItem);
         }
 
         ModalManager.show('worklogModal');
     }
 
-    getAvailabilityStatus(assignedHours, totalAvailableHours) {
-        const standardWorkweek = 40;
-        
+    getAvailabilityStatus(assignedHours) {
         if (assignedHours >= 40) {
-            return { 
-                text: 'Busy', 
-                color: '#c62828', 
-                bg: '#ffebee'
-            };
-        } else if (assignedHours >= 21 && assignedHours < 40) {
-            return { 
-                text: 'Partial', 
-                color: '#f57c00', 
-                bg: '#fff3e0'
-            };
+            return { text: 'Busy', color: '#c62828', bg: '#ffebee' };
+        } else if (assignedHours >= 21) {
+            return { text: 'Partial', color: '#f57c00', bg: '#fff3e0' };
         } else {
-            return { 
-                text: 'Available', 
-                color: '#2e7d32', 
-                bg: '#e8f5e9'
-            };
+            return { text: 'Available', color: '#2e7d32', bg: '#e8f5e9' };
         }
     }
 
-    getHoursBackgroundColor(hours) {
-        if (hours >= 0 && hours <= 4) return '#e8f5e9';
-        if (hours > 4 && hours < 8) return '#fff3e0';
-        if (hours === 8) return '#e3f2fd';
-        return '#ffebee';
-    }
-
-    getHoursTextColor(hours) {
-        if (hours >= 0 && hours <= 4) return '#2e7d32';
-        if (hours > 4 && hours < 8) return '#f57c00';
-        if (hours === 8) return '#1976d2';
-        return '#c62828';
-    }
-
     getStatusBadge(status) {
-        const statusConfig = {
-            'pending': { color: '#F5A623', bg: '#FFF4E6', text: 'Pending' },
-            'ongoing': { color: '#4A90E2', bg: '#E3F2FD', text: 'Ongoing' },
-            'completed': { color: '#7ED321', bg: '#E8F5E9', text: 'Completed' },
-            'on-hold': { color: '#9B9B9B', bg: '#F5F5F5', text: 'On Hold' },
-            'cancelled': { color: '#E74C3C', bg: '#FFEBEE', text: 'Cancelled' }
-        };
-        
-        const config = statusConfig[status] || statusConfig['pending'];
+        const config = CONFIG.STATUS_COLORS[status] || CONFIG.STATUS_COLORS.pending;
         return `<span style="background: ${config.bg}; color: ${config.color}; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">${config.text}</span>`;
     }
 
     getPriorityBadge(priority) {
-        const priorityConfig = {
-            'low': { color: '#7ED321', bg: '#E8F5E9', text: 'Low' },
-            'medium': { color: '#F5A623', bg: '#FFF4E6', text: 'Medium' },
-            'high': { color: '#E74C3C', bg: '#FFEBEE', text: 'High' }
-        };
-        
-        const config = priorityConfig[priority] || priorityConfig['medium'];
+        const config = CONFIG.PRIORITY_COLORS[priority] || CONFIG.PRIORITY_COLORS.medium;
         return `<span style="background: ${config.bg}; color: ${config.color}; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">${config.text}</span>`;
     }
 
     getWorklogStatusBadge(status) {
-        const statusConfig = {
+        const config = {
             'in progress': { color: '#4A90E2', bg: '#E3F2FD', text: 'In Progress' },
-            'completed': { color: '#7ED321', bg: '#E8F5E9', text: 'Completed' },
-            'pending': { color: '#F5A623', bg: '#FFF4E6', text: 'Pending' },
-            'blocked': { color: '#E74C3C', bg: '#FFEBEE', text: 'Blocked' }
+            completed: { color: '#7ED321', bg: '#E8F5E9', text: 'Completed' },
+            pending: { color: '#F5A623', bg: '#FFF4E6', text: 'Pending' },
+            blocked: { color: '#E74C3C', bg: '#FFEBEE', text: 'Blocked' }
         };
         
-        const config = statusConfig[status] || statusConfig['in progress'];
-        return `<span style="background: ${config.bg}; color: ${config.color}; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">${config.text}</span>`;
+        const cfg = config[status] || config['in progress'];
+        return `<span style="background: ${cfg.bg}; color: ${cfg.color}; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">${cfg.text}</span>`;
+    }
+
+    getNoProjectsHTML() {
+        return `
+            <div style="padding: 40px; text-align: center; color: #6c757d; grid-column: 1 / -1;">
+                <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+                <p style="font-size: 16px;">No projects found</p>
+                <p style="font-size: 14px;">Create projects or adjust your filters</p>
+            </div>
+        `;
     }
 }
 
 // ============================================
 // INITIALIZATION
 // ============================================
-
 function initializeProjectTimeline() {
-    console.log('[INIT] Initializing project timeline...');
     const timelineService = new ProjectTimelineService();
     const renderer = new ProjectTimelineRenderer(timelineService);
     
@@ -1017,7 +1005,7 @@ function initializeProjectTimeline() {
 
     const dateInput = document.getElementById('dateFilter');
     if (dateInput) {
-        dateInput.value = new Date().toISOString().split('T')[0];
+        dateInput.value = Utils.formatDate(new Date());
         dateInput.addEventListener('change', (e) => {
             renderer.selectedDate = new Date(e.target.value);
             renderer.loadProjects();
@@ -1027,30 +1015,32 @@ function initializeProjectTimeline() {
     const searchInput = document.getElementById('employeeSearch');
     if (searchInput) {
         searchInput.placeholder = 'Search project, team member, or project manager...';
-        const debouncedSearch = debounce((value) => {
+        const debouncedSearch = Utils.debounce((value) => {
             renderer.searchQuery = value;
             renderer.filterProjects();
-        }, 300);
+        });
         searchInput.addEventListener('input', (e) => debouncedSearch(e.target.value));
     }
 
     return renderer;
 }
 
+// ============================================
+// MAIN ENTRY POINT
+// ============================================
 let app;
 let projectRenderer;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('[INIT] DOM loaded, starting initialization...');
+    console.log('[MAIN] Initializing dashboard...');
     
     try {
         app = new DashboardApp();
         projectRenderer = initializeProjectTimeline();
-        app.setupLogoutListeners();
         
-        console.log('[INIT] Dashboard initialized successfully');
+        console.log('[MAIN] Dashboard initialized successfully');
     } catch (error) {
-        console.error('[INIT] Error initializing dashboard:', error);
-        MessageManager.error('Failed to initialize dashboard: ' + error.message);
+        console.error('[MAIN] Error:', error);
+        MessageManager.error('Failed to initialize dashboard');
     }
 });

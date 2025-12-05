@@ -1,363 +1,480 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Management Dashboard</title>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Project Management Dashboard</title>
 
-    <link rel="stylesheet" href="../CSS_Files/Dashboard.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">
-                <i class="fas fa-project-diagram"></i>
-                <span>PM Portal</span>
-            </div>
-        </div>
-        
-        <nav class="sidebar-nav">
-            <a href="../HTML_Files/Dashboard.html" class="nav-item active">
-                <i class="fas fa-line-chart"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="../HTML_Files/My Projects.html" class="nav-item">
-                <i class="fas fa-folder-open"></i>
-                <span>My Projects</span>
-            </a>
-            <a href="../HTML_Files/Resource Requests.html" class="nav-item">
-                <i class="fas fa-paper-plane"></i>
-                <span>Resource Requests</span>
-            </a>
-            <a href="../HTML_Files/projecttrack.html" class="nav-item">
-                <i class="fas fa-tasks"></i>
-                <span>Project Tracking</span>
-            </a>
-        </nav>
-        
-        <div class="sidebar-footer">
-            <button class="logout-btn" id="logoutBtn">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </button>
-        </div>
-    </aside>
+        <link rel="stylesheet" href="../CSS_Files/Dashboard.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </head>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Header -->
-        <header class="top-header">
-            <div class="header-left">
-                <h1>Dashboard</h1>
-            </div>
-            <div class="header-right">
-                <div class="user-info">
-                    <img src="https://ui-avatars.com/api/?name=Sarah+Williams&background=000&color=fff" alt="User" class="user-avatar">
-                        <span class="user-name" id="userName">Project Manager</span>
-                </div>
-            </div>
-        </header>
+    <style>
+        .quick-actions-redesigned {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
 
-        <!-- Dashboard Content -->
-        <div class="page-content">
-            <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon blue">
-                        <i class="fas fa-project-diagram"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3 id="activeProjects">2</h3>
-                        <p>Active Projects</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon green">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3 id="teamMembers">4</h3>
-                        <p>My Team Members</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon orange">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3 id="totalHours">136h</h3>
-                        <p>Total Hours This Week</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon red">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3 id="teamUtilization">85%</h3>
-                        <p>Team Utilization</p>
-                    </div>
-                </div>
-            </div>
+        .quick-action-btn-new {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--secondary-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-weight: 600;
+        }
 
-            <!-- Weekly Allocation Calendar Section -->
-            <div class="allocation-section">
-                <div class="section-header">
-                    <h2>My Team Weekly Allocation</h2>
-                    <div class="week-selector">
-                        <button class="week-nav-btn" id="prevWeek">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <select id="weekSelect" class="week-select">
-                            <option value="2025-11-03">Week of Nov 3 - 7, 2025</option>
-                            <option value="2025-11-10" selected>Week of Nov 10 - 14, 2025</option>
-                            <option value="2025-11-17">Week of Nov 17 - 21, 2025</option>
-                            <option value="2025-11-24">Week of Nov 24 - 28, 2025</option>
-                        </select>
-                        <button class="week-nav-btn" id="nextWeek">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
+        .quick-action-btn-new i {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
 
-                <div class="allocation-table-container">
-                    <table class="allocation-table">
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Mon<br><span class="date-label">--</span></th>
-                                <th>Tue<br><span class="date-label">--</span></th>
-                                <th>Wed<br><span class="date-label">--</span></th>
-                                <th>Thu<br><span class="date-label">--</span></th>
-                                <th>Fri<br><span class="date-label">--</span></th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody id="allocationTableBody">
-                            <tr>
-                                <td class="employee-cell">
-                                    <div class="employee-info">
-                                        <img src="https://ui-avatars.com/api/?name=John+Doe&background=4A90E2&color=fff" alt="John Doe" class="employee-avatar-small">
-                                        <div>
-                                            <div class="employee-name">John Doe</div>
-                                            <div class="employee-role">Senior Developer</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="hours-cell full" data-employee="John Doe" data-day="Mon">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="John Doe" data-day="Tue">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell partial" data-employee="John Doe" data-day="Wed">
-                                    <div class="hours-value">6h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="John Doe" data-day="Thu">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell partial" data-employee="John Doe" data-day="Fri">
-                                    <div class="hours-value">4h</div>
-                                </td>
-                                <td class="total-cell">34h</td>
-                            </tr>
-                            <tr>
-                                <td class="employee-cell">
-                                    <div class="employee-info">
-                                        <img src="https://ui-avatars.com/api/?name=Jane+Smith&background=7ED321&color=fff" alt="Jane Smith" class="employee-avatar-small">
-                                        <div>
-                                            <div class="employee-name">Jane Smith</div>
-                                            <div class="employee-role">UI/UX Designer</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="hours-cell full" data-employee="Jane Smith" data-day="Mon">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell empty" data-employee="Jane Smith" data-day="Tue">
-                                    <div class="hours-value">0h</div>
-                                </td>
-                                <td class="hours-cell empty" data-employee="Jane Smith" data-day="Wed">
-                                    <div class="hours-value">0h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="Jane Smith" data-day="Thu">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="Jane Smith" data-day="Fri">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="total-cell">24h</td>
-                            </tr>
-                            <tr>
-                                <td class="employee-cell">
-                                    <div class="employee-info">
-                                        <img src="https://ui-avatars.com/api/?name=Mike+Johnson&background=F5A623&color=fff" alt="Mike Johnson" class="employee-avatar-small">
-                                        <div>
-                                            <div class="employee-name">Mike Johnson</div>
-                                            <div class="employee-role">Backend Developer</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="hours-cell full" data-employee="Mike Johnson" data-day="Mon">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="Mike Johnson" data-day="Tue">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="Mike Johnson" data-day="Wed">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="Mike Johnson" data-day="Thu">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="Mike Johnson" data-day="Fri">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="total-cell">40h</td>
-                            </tr>
-                            <tr>
-                                <td class="employee-cell">
-                                    <div class="employee-info">
-                                        <img src="https://ui-avatars.com/api/?name=David+Brown&background=D0021B&color=fff" alt="David Brown" class="employee-avatar-small">
-                                        <div>
-                                            <div class="employee-name">David Brown</div>
-                                            <div class="employee-role">DevOps Engineer</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="hours-cell full" data-employee="David Brown" data-day="Mon">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="David Brown" data-day="Tue">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="David Brown" data-day="Wed">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell full" data-employee="David Brown" data-day="Thu">
-                                    <div class="hours-value">8h</div>
-                                </td>
-                                <td class="hours-cell partial" data-employee="David Brown" data-day="Fri">
-                                    <div class="hours-value">6h</div>
-                                </td>
-                                <td class="total-cell">38h</td>
-                            </tr>
-                        </tbody>
-                    </table>
+        .quick-action-btn-new:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .quick-action-btn-new.selected {
+            border-color: var(--primary-color);
+            background-color: var(--bg-light);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Work Button */
+        .work-btn-new {
+            color: var(--text-primary);
+        }
+
+        .work-btn-new i {
+            color: var(--accent-blue);
+        }
+
+        .work-btn-new:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .work-btn-new.selected {
+            border-color: var(--accent-blue);
+            background-color: rgba(74, 144, 226, 0.05);
+        }
+
+        /* Absent Button */
+        .absent-btn-new {
+            color: var(--text-primary);
+        }
+
+        .absent-btn-new i {
+            color: var(--accent-red);
+        }
+
+        .absent-btn-new:hover {
+            border-color: var(--accent-red);
+        }
+
+        .absent-btn-new.selected {
+            border-color: var(--accent-red);
+            background-color: rgba(208, 2, 27, 0.05);
+        }
+
+        /* Other Actions Dropdown */
+        .other-actions-dropdown {
+            padding: 12px 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--secondary-color);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 28px;
+            color: var(--text-primary);
+        }
+
+        .other-actions-dropdown:hover {
+            border-color: var(--text-primary);
+            box-shadow: var(--shadow);
+        }
+
+        .other-actions-dropdown:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+            }
+            /* Quick Actions - Redesigned */
+        .quick-actions-redesigned {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .quick-action-btn-new {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--secondary-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .quick-action-btn-new i {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .quick-action-btn-new:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .quick-action-btn-new.selected {
+            border-color: var(--primary-color);
+            background-color: var(--bg-light);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Work Button */
+        .work-btn-new {
+            color: var(--text-primary);
+        }
+
+        .work-btn-new i {
+            color: var(--accent-blue);
+        }
+
+        .work-btn-new:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .work-btn-new.selected {
+            border-color: var(--accent-blue);
+            background-color: rgba(74, 144, 226, 0.05);
+        }
+
+        /* Present Button */
+        .present-btn-new {
+            color: var(--text-primary);
+        }
+
+        .present-btn-new i {
+            color: var(--accent-green);
+        }
+
+        .present-btn-new:hover {
+            border-color: var(--accent-green);
+        }
+
+        .present-btn-new.selected {
+            border-color: var(--accent-green);
+            background-color: rgba(126, 211, 33, 0.05);
+        }
+
+        /* Absent Button */
+        .absent-btn-new {
+            color: var(--text-primary);
+        }
+
+        .absent-btn-new i {
+            color: var(--accent-red);
+        }
+
+        .absent-btn-new:hover {
+            border-color: var(--accent-red);
+        }
+
+        .absent-btn-new.selected {
+            border-color: var(--accent-red);
+            background-color: rgba(208, 2, 27, 0.05);
+        }
+
+        /* Other Actions Dropdown */
+        .other-actions-dropdown {
+            padding: 12px 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--secondary-color);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            padding-right: 28px;
+            color: var(--text-primary);
+        }
+
+        .other-actions-dropdown:hover {
+            border-color: var(--text-primary);
+            box-shadow: var(--shadow);
+        }
+
+        .other-actions-dropdown:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+    <body>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>PM Portal</span>
                 </div>
             </div>
-
-            <!-- Available Team Members -->
-            <div class="available-section">
-                <h2>Available Team Members This Week</h2>
-                <div class="available-grid">
-                    <div class="available-card">
-                        <img src="https://ui-avatars.com/api/?name=Jane+Smith&background=7ED321&color=fff" alt="Jane Smith" class="available-avatar">
-                        <div class="available-info">
-                            <h4>Jane Smith</h4>
-                            <p class="available-role">UI/UX Designer</p>
-                            <div class="utilization-badge low">
-                                <i class="fas fa-circle"></i> 60% Utilization
-                            </div>
-                            <p class="available-hours">16h available</p>
-                        </div>
-                    </div>
-                    <div class="available-card">
-                        <img src="https://ui-avatars.com/api/?name=David+Brown&background=D0021B&color=fff" alt="David Brown" class="available-avatar">
-                        <div class="available-info">
-                            <h4>David Brown</h4>
-                            <p class="available-role">DevOps Engineer</p>
-                            <div class="utilization-badge medium">
-                                <i class="fas fa-circle"></i> 95% Utilization
-                            </div>
-                            <p class="available-hours">2h available</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Projects Overview -->
-         
-                
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Allocate Hours Modal -->
-    <div class="modal-overlay" id="allocateHoursModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h2>Allocate Hours</h2>
-                <button class="modal-close" id="closeAllocateModal">
-                    <i class="fas fa-times"></i>
+            
+            <nav class="sidebar-nav">
+                <a href="../HTML_Files/Dashboard.html" class="nav-item active">
+                    <i class="fas fa-line-chart"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="../HTML_Files/My Projects.html" class="nav-item">
+                    <i class="fas fa-folder-open"></i>
+                    <span>My Projects</span>
+                </a>
+                <a href="../HTML_Files/Resource Requests.html" class="nav-item">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Resource Requests</span>
+                </a>
+                <a href="../HTML_Files/projecttrack.html" class="nav-item">
+                    <i class="fas fa-tasks"></i>
+                    <span>Project Tracking</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button class="logout-btn" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
                 </button>
             </div>
-            <div class="modal-body">
-                <form id="allocateHoursForm">
-                    <div class="form-group">
-                        <label>Employee: <span id="selectedEmployee">John Doe</span></label>
-                        <label>Day: <span id="selectedDay">Monday, Nov 10</span></label>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h1>Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <img src="https://ui-avatars.com/api/?name=Sarah+Williams&background=000&color=fff" alt="User" class="user-avatar">
+                            <span class="user-name" id="userName">Project Manager</span>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="projectSelect">Project *</label>
-                        <select id="projectSelect" required>
-                            <option value="">Select Project</option>
-                            <option value="proj1">Customer Portal Redesign</option>
-                            <option value="proj2">API Integration</option>
-                        </select>
+                </div>
+            </header>
+
+            <!-- Dashboard Content -->
+            <div class="page-content">
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="activeProjects">0</h3>
+                            <p>Active Projects</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="teamMembers">0</h3>
+                            <p>My Team Members</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalHours">0h</h3>
+                            <p>Total Hours This Week</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="teamUtilization">0%</h3>
+                            <p>Team Utilization</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weekly Allocation Calendar Section -->
+                <div class="allocation-section">
+                    <div class="section-header">
+                        <h2>My Team Weekly Allocation</h2>
+                        <div class="week-selector">
+                            <button class="week-nav-btn" id="prevWeek">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <select id="weekSelect" class="week-select">
+                                <!-- Options will be generated by JS -->
+                            </select>
+                            <button class="week-nav-btn" id="nextWeek">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="hoursInput">Hours (0-8) *</label>
-                        <input type="number" id="hoursInput" min="0" max="8" step="0.5" value="8" required>
+                    <div class="allocation-table-container">
+                        <table class="allocation-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Mon<br><span class="date-label">--</span></th>
+                                    <th>Tue<br><span class="date-label">--</span></th>
+                                    <th>Wed<br><span class="date-label">--</span></th>
+                                    <th>Thu<br><span class="date-label">--</span></th>
+                                    <th>Fri<br><span class="date-label">--</span></th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allocationTableBody">
+                                <!-- Table body will be populated by JS -->
+                            </tbody>
+                        </table>
                     </div>
+                </div>
 
-                    <div class="form-group">
-                        <label for="taskInput">Task Description</label>
-                        <textarea id="taskInput" rows="3" placeholder="What will they be working on?"></textarea>
+                <!-- Available Team Members -->
+                <div class="available-section">
+                    <h2>Available Team Members This Week</h2>
+                    <div class="available-grid">
+                        <!-- Available team members will be populated by JS -->
                     </div>
+                </div>
+            </div>
+        </main>
 
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" id="cancelAllocate">Cancel</button>
-                        <button type="submit" class="primary-btn">
-                            <i class="fas fa-save"></i> Save Allocation
-                        </button>
-                    </div>
-                </form>
+        <!-- Allocate Hours Modal (Separate Component) -->
+        <div class="modal-overlay" id="allocateHoursModal">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <h2>Allocate Hours</h2>
+                    <button class="modal-close" id="closeAllocateModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="allocateHoursForm">
+                        <div class="form-group">
+                            <label>Employee: <span id="selectedEmployee">--</span></label>
+                            <label>Day: <span id="selectedDay">--</span></label>
+                        </div>
+                        
+                                <div class="quick-actions-redesigned">
+        <button type="button" class="quick-action-btn-new work-btn-new" data-action="work">
+            <i class="fas fa-briefcase"></i>
+            <span>Work</span>
+        </button>
+        <button type="button" class="quick-action-btn-new absent-btn-new" data-action="absent">
+            <i class="fas fa-user-slash"></i>
+            <span>Absent</span>
+        </button>
+        <select id="otherActionsSelect" class="other-actions-dropdown">
+            <option value="">Other...</option>
+            <option value="leave">Leave</option>
+            <option value="holiday">Holiday</option>
+            <option value="other">Other</option>
+        </select>
+    </div>
+    
+                        <!-- Project Selection (shown for regular work) -->
+                        <div class="form-group" id="projectGroup" style="display: none;">
+                            <label for="projectSelect">Project *</label>
+                            <select id="projectSelect" required>
+                                <option value="">Select Project</option>
+                            </select>
+                        </div>
+
+                        <!-- Hours Input (shown for regular work and leave) -->
+                        <div class="form-group" id="hoursGroup" style="display: none;">
+                            <label for="hoursInput">Hours (0-24) *</label>
+                            <input type="number" id="hoursInput" min="0" max="24" step="0.5" value="0" required>
+                            <div class="hours-indicator" id="hoursIndicator"></div>
+                        </div>
+
+                        <!-- Task Description (shown for regular work) -->
+                        <div class="form-group" id="taskGroup" style="display: none;">
+                            <label for="taskInput">Task Description</label>
+                            <textarea id="taskInput" rows="3" placeholder="What will they be working on?"></textarea>
+                        </div>
+
+                        <!-- Leave/Absent Reason (shown for leave/absent) -->
+                        <div class="form-group" id="reasonGroup" style="display: none;">
+                            <label for="reasonInput">Reason</label>
+                            <textarea id="reasonInput" rows="3" placeholder="Reason for leave/absence..."></textarea>
+                        </div>
+
+
+                        <div class="form-actions">
+                            <button type="button" class="btn-secondary" id="cancelAllocate">Cancel</button>
+                            <button type="submit" class="primary-btn" id="submitBtn">
+                                <i class="fas fa-save"></i> Save Allocation
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Logout Modal -->
-    <div class="modal-overlay" id="logoutModal">
-        <div class="modal-box modal-box-small">
-            <div class="modal-header">
-                <h2>Confirm Logout</h2>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to logout?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
-                <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+        <!-- Logout Modal -->
+        <div class="modal-overlay" id="logoutModal">
+            <div class="modal-box modal-box-small">
+                <div class="modal-header">
+                    <h2>Confirm Logout</h2>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to logout?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelLogout">Cancel</button>
+                    <button type="button" class="btn-danger" id="confirmLogout">Yes, Logout</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="modal-overlay" id="loadingOverlay">
-        <div class="loading-spinner">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>Loading...</p>
+        <!-- Loading Overlay -->
+        <div class="modal-overlay" id="loadingOverlay">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading...</p>
+            </div>
         </div>
-    </div>
 
-    <div id="messageContainer"></div>
+        <!-- Message Container -->
+        <div id="messageContainer"></div>
 
-<script type="module" src="../JS_Files/Dashboard.js"></script>
-
-</body>
-</html>
+        <script type="module" src="../JS_Files/Dashboard.js"></script>
+        
+    </body>
+    </html>

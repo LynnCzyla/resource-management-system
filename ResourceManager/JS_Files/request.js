@@ -1,9 +1,6 @@
 // RESOURCE MANAGEMENT (RM) request.js
 
 import { supabase } from "../../supabaseClient.js";
-
-
-
  async function updateUserNameDisplayEnhanced() {
     const userNameElement = document.getElementById('userName');
     const userAvatarElement = document.querySelector('.user-avatar');
