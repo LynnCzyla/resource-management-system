@@ -11,7 +11,7 @@ const CONFIG = {
     DEBOUNCE_DELAY: 300,
     MESSAGE_TIMEOUT: 5000,
     API_TIMEOUT: 10000,
-    API_BASE_URL: 'http://127.0.0.1:8000'
+    API_BASE_URL: 'https://finalpls-resource-management-system.onrender.com'  // CHANGE THIS!
 };
 
 const STATUS_COLORS = {
@@ -681,7 +681,8 @@ class ProjectApp {
             let recommendationsFailed = false;
             
             try {
-                const res = await fetch(`https://finalpls-resource-management-system.onrender.com/recommendations/${projectId}`, {
+                // Use API_BASE_URL from CONFIG and add /api/ prefix
+                const res = await fetch(`${CONFIG.API_BASE_URL}/api/recommendations/${projectId}`, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
@@ -690,14 +691,18 @@ class ProjectApp {
                     body: JSON.stringify({})
                 });
                 
+                // Add timeout handling
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Request timeout')), CONFIG.API_TIMEOUT);
+                });
                 
+                const response = await Promise.race([res, timeoutPromise]);
                 
-                clearTimeout(timeoutId);
-                
-                if (!res.ok) {
+                if (!response.ok) {
                     recommendationsFailed = true;
+                    console.warn(`Recommendations API returned status: ${response.status}`);
                 } else {
-                    const data = await res.json();
+                    const data = await response.json();
                     if (data.recommendations && Array.isArray(data.recommendations)) {
                         recommendedEmployees = data.recommendations.flatMap(r =>
                             r.recommended_employees.map(emp => ({
