@@ -581,7 +581,7 @@ class UIManager {
         avatar.onerror = () => {
             avatar.src = Utils.generateAvatar(emp.name);
         };
-
+    
         // Set text content
         card.querySelector('h3').textContent = emp.name;
         card.querySelector('.employee-role').textContent = emp.role;
@@ -590,18 +590,33 @@ class UIManager {
         const statusBadge = card.querySelector('.status-badge');
         statusBadge.textContent = DataService.AVAILABILITY_MAP[emp.availability] || emp.availability;
         statusBadge.className = `status-badge ${emp.availability}`;
-
+    
         // Update availability section
         this.updateAvailabilitySection(card, emp);
         
         // Update skills
         this.updateSkillsSection(card, emp);
         
-        // Set button event listeners
+        // Set button event listeners - FIXED VERSION
         const buttons = card.querySelectorAll('button');
-        buttons[0].onclick = () => window.app.viewEmployee(emp.id);
-        buttons[1].onclick = () => window.app.assignEmployee(emp.id);
-
+        buttons[0].addEventListener('click', () => {
+            if (window.app && window.app.viewEmployee) {
+                window.app.viewEmployee(emp.id);
+            } else {
+                console.error('App not initialized properly');
+                MessageManager.error('Application not ready. Please refresh the page.');
+            }
+        });
+        
+        buttons[1].addEventListener('click', () => {
+            if (window.app && window.app.assignEmployee) {
+                window.app.assignEmployee(emp.id);
+            } else {
+                console.error('App not initialized properly');
+                MessageManager.error('Application not ready. Please refresh the page.');
+            }
+        });
+    
         return card;
     }
 
