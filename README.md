@@ -25,8 +25,9 @@ This system uses **Python**, **Tesseract OCR**, and **Natural Language Processin
 
 ## Team Members
 
-- [Student 1](https://github.com/student1) – Frontend / UI  
-- [Student 2](https://github.com/student2) – Backend / Python API  
+- Romell Ebuen (https://github.com/student1)
+- Vincent Miguel Soriano (https://github.com/Maki-code-it)
 - Lynn Czyla M. Alpuerto (https://github.com/LynnCzyla)
+
 
 
